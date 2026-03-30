@@ -37,11 +37,18 @@ description: "SDD 开发工作流 v3.0 — 写码门禁 + Skill路由 + Skill执
 
 > AI 每次准备写/改生产代码前，必须自检以下条件，**全部 ✅ 才可执行**：
 
-| # | 检查项                                              | 未通过处理                |
-| - | --------------------------------------------------- | ------------------------- |
-| 1 | `.project/` 已初始化                              | → 先完成图一             |
-| 2 | 当前功能有 REQ + DES 且 `review-status: approved` | → 先完成图二 §2.1-§2.4 |
-| 3 | 阻塞依赖已就绪（用户明确说"跳过"的视为就绪）        | → 等待用户提供或确认跳过 |
+| # | 检查项                                              | 未通过处理                         |
+| - | --------------------------------------------------- | ---------------------------------- |
+| 1 | `.project/` 已初始化                              | → 先完成图一                      |
+| 2 | 当前功能有 REQ + DES 且 `review-status: approved` | → 先完成图二 §2.1-§2.4           |
+| 3 | 阻塞依赖已就绪（用户明确说"跳过"的视为就绪）        | → 等待用户提供或确认跳过          |
+| 4 | 技术栈对应的编码/审计 Skill 已安装                  | → 按 §1.3 Skill 执行流程安装     |
+
+**检查项 #4 Skill 安装检查规则**：根据 project-custom.md「技术栈」声明，检查以下目录是否存在：
+- 技术栈含前端 → `.agents/skills/frontend-coding/`
+- 技术栈含 Java → `.agents/skills/java-coding/`
+- 所有项目 → `.agents/skills/code-audit/`
+- 任一缺失 → 按 §1.3 Skill 执行流程安装，安装失败询问用户（手动安装 / 确认兜底）
 
 **快速通道豁免**：仅样式/文案的快速通道任务，检查项 #2 简化为：REQ + DES 可各简化为一句话描述，免评审。AI 在进入 Step 0 前，在对应 REQ + DES 文件中追加一句话记录（文件不存在则新建）。
 
@@ -57,19 +64,20 @@ description: "SDD 开发工作流 v3.0 — 写码门禁 + Skill路由 + Skill执
 ```
 用户提供 PRD
   → AI 读取 PRD，理解业务需求
-  → AI 执行 PRD 审计：
-    1. 按 §1.3 Skill 执行流程调用 /prd-audit Skill
-    2. Skill 不可用 → 按默认6个维度（完整性/一致性/可行性/边界/优先级/安全合规）+ P0/P1/P2 标准执行
-    3. P0 必须解决后才继续
+  → AI 执行 PRD 审计（必须输出 Skill 执行日志）：
+    1. 按 §1.3 Skill 执行流程调用 /prd-audit Skill，输出执行日志
+    2. Skill 安装失败 → 询问用户（手动安装 / 使用默认6个维度兜底）
+    3. 兜底标准：完整性/一致性/可行性/边界/优先级/安全合规 + P0/P1/P2
+    4. P0 必须解决后才继续
   → AI 询问技术栈（前端 / 后端 / 数据库）→ 写入 project-custom.md「技术栈」区块
   → AI 询问外部依赖（第三方API / 内部服务 / 组件库）
   → AI 询问外部依赖文档并学习 → 记录到 project-custom.md「外部依赖」区块
   → AI 初始化 .project/ 目录
-  → AI 初始化代码结构（脚手架）：
+  → AI 初始化代码结构（脚手架，必须输出 Skill 执行日志）：
     1. 查 §1.3 Skill 路由表，按技术栈匹配对应 Skill
-    2. 后端 Java → 按 §1.3 Skill 执行流程调用 java-project-creator 生成脚手架
-    3. 前端 → 按 §1.3 Skill 执行流程调用 wap-project-creator 生成脚手架
-    4. Skill 不可用 → 用框架官方 CLI / 手动搭建兜底
+    2. 后端 Java → 按 §1.3 Skill 执行流程调用 java-project-creator，输出执行日志
+    3. 前端 → 按 §1.3 Skill 执行流程调用 wap-project-creator，输出执行日志
+    4. Skill 安装失败 → 询问用户（手动安装 / 使用框架官方 CLI 兜底）
   → 安装依赖，确认能跑起来
   → 进入图二业务开发循环
 ```
@@ -174,21 +182,21 @@ AI 生成 .project/ 目录（汇总所有信息）
 
 ### 1.3 Skill 路由表
 
-公司级规范以 Skill 形式封装，AI 在对应阶段自动安装并调用。
+公司级规范以 Skill 形式封装，AI 在对应阶段必须自动安装并调用。
 
 **Skill 仓库**：`https://git.nykjsrv.cn/ai-coding/skills.git`
 **安装命令**：`npx skills add {仓库地址} --skill {skill名称} --yes`
 
-| 阶段             | 触发时机                    | Skill 路由            | skill 名称           |
-| ---------------- | --------------------------- | --------------------- | -------------------- |
-| PRD 审计         | §1.1 / §2.1                | /prd-audit            | prd-audit            |
-| 后端项目初始化   | §1.1 脚手架创建（仅新项目） | /java-project-creator | java-project-creator |
-| 前端项目初始化   | §1.1 脚手架创建（仅新项目） | /wap-project-creator  | wap-project-creator  |
-| 前端编码         | §3 Step 4 前端改动          | /frontend-coding      | frontend-coding      |
-| 后端编码         | §3 Step 4 后端改动          | /java-coding          | java-coding          |
-| 代码审计         | §3 Step 5                   | /code-audit           | code-audit           |
+| 阶段           | 触发时机                     | Skill 路由            | skill 名称           |
+| -------------- | ---------------------------- | --------------------- | -------------------- |
+| PRD 审计       | §1.1 / §2.1                | /prd-audit            | prd-audit            |
+| 后端项目初始化 | §1.1 脚手架创建（仅新项目） | /java-project-creator | java-project-creator |
+| 前端项目初始化 | §1.1 脚手架创建（仅新项目） | /wap-project-creator  | wap-project-creator  |
+| 前端编码       | §3 Step 4 前端改动          | /frontend-coding      | frontend-coding      |
+| 后端编码       | §3 Step 4 后端改动          | /java-coding          | java-coding          |
+| 代码审计       | §3 Step 5                   | /code-audit           | code-audit           |
 
-**Skill 执行流程**（所有触发点统一遵守）：
+**Skill 执行流程**（所有触发点必须统一严格遵守，不可跳过）：
 
 ```
 1. 检查项目目录 .agents/skills/{skill名称}/ 是否已存在
@@ -196,18 +204,36 @@ AI 生成 .project/ 目录（汇总所有信息）
    → 不存在 → 进入第 2 步（安装）
 2. 安装：执行 npx skills add {仓库地址} --skill {skill名称} --yes
    → 安装成功 → 进入第 3 步
-   → 安装失败 → 跳过调用，由各触发点使用内置默认兜底
+   → 安装失败 → 询问用户：
+     A. 手动安装（用户自行执行命令后告知 AI）
+     B. 使用内置默认兜底
+     用户确认后继续
 3. 调用：读取 Skill 内容，按其规范执行
+4. 输出执行日志（必须，未输出视为未执行）
+5. 更新状态（§3 编码阶段的 Skill）：更新 index.md 对应模块的 skill-status
+```
+
+**Skill 执行日志格式**（每次执行 Skill 流程后必须输出，禁止省略）：
+
+```
+【Skill 执行日志】
+  阶段: {触发阶段，如 §1.1 PRD审计 / §3 Step4 前端编码}
+  Skill: {skill名称}
+  检查: .agents/skills/{skill名称}/ → {已存在 / 不存在}
+  安装: {跳过(已存在) / 安装成功 / 安装失败}
+  执行: {调用Skill / 内置兜底({兜底方式})}
 ```
 
 **匹配规则**：
+
 - 根据 project-custom.md「技术栈」声明 + 当前改动文件类型，匹配对应 Skill
-- Skill 安装失败 → 用内置默认兜底（PRD 默认 6 维度 / C-01~C-10 / S-01~S-05）
+- Skill 安装失败 → 询问用户（手动安装 / 使用内置默认兜底），由用户确认后继续
 - **项目初始化（仅新项目 §1.1）**：技术栈含 Java → java-project-creator；技术栈含前端 → wap-project-creator；旧项目（§1.2）已有代码结构，不触发
 - **编码阶段**：前端改动调用 /frontend-coding，后端改动调用 /java-coding（§3 Step 4）
 - **代码审计**：前后端统一调用 /code-audit（§3 Step 5）
 
 **融合规则**（project-custom.md 与 Skill 的关系）：
+
 1. 读取 project-custom.md（铁律 + 项目规范）
 2. 调用 Skill 获取公司级规范
 3. 冲突项 → 以 project-custom.md 为准
@@ -236,9 +262,10 @@ AI 生成 .project/ 目录（汇总所有信息）
   2. {边界不明确的地方}
   3. {可能有多种实现方式需要选择的地方}
 
-需求审计：
-  1. 按 §1.3 Skill 执行流程调用 /prd-audit Skill
-  2. Skill 不可用 → 使用默认轻量审计（4 维度）：
+需求审计（必须输出 Skill 执行日志）：
+  1. 按 §1.3 Skill 执行流程调用 /prd-audit Skill，输出执行日志
+  2. Skill 安装失败 → 询问用户（手动安装 / 使用默认轻量审计兜底）
+  3. 兜底标准（4 维度）：
      - 完整性：正常+异常流程是否完整
      - 一致性：与现有功能/数据模型是否冲突
      - 可行性：现有架构是否支撑
@@ -387,6 +414,7 @@ Step 7: 检查是否存在 outdated 模块，若有则询问：
 
 - 由 §3 Step 7（Changelog）+ Step 7.5（specs 状态）+ Step 8（context.md）自动完成
 - 标注任务类型标签：`[Feature]` / `[Bug]` / `[Refactor]`
+- 重置 index.md 当前模块的 skill-status 为 `pending`（下个需求重新执行 Skill）
 - 进入下一个需求，↻ 循环
 
 ---
@@ -426,6 +454,7 @@ Step 7: 检查是否存在 outdated 模块，若有则询问：
   → 路由表匹配目标模块（含类型列：feature / bug / refactor）
   → 读取 master/requirements/REQ-xx + master/design/DES-xx
   → 检查 sync-status
+  → 检查 skill-status
 ```
 
 | sync-status  | 含义                                     | 处理                   |
@@ -433,6 +462,15 @@ Step 7: 检查是否存在 outdated 模块，若有则询问：
 | `synced`   | spec 与代码一致                          | 正常执行               |
 | `outdated` | 代码已变更 spec 未同步                   | 先对齐再执行           |
 | `pending`  | 尚未开始（Code Gate 未拦截成功的情况下） | 回退到 §2.1 补写 spec |
+
+| skill-status     | 含义                               | 处理                                       |
+| ---------------- | ---------------------------------- | ------------------------------------------ |
+| `pending`        | 未执行任何 Skill                   | Step 4 必须执行 Skill 流程                 |
+| `coding:done`    | 编码 Skill 已执行                  | Step 4 跳过 Skill，直接编码                |
+| `coding:fallback`| 编码 Skill 安装失败，用户确认兜底  | Step 4 使用内置规约 C-01~C-10              |
+| `audit:done`     | 审计 Skill 已执行                  | Step 5 跳过 Skill，直接审计                |
+| `audit:fallback` | 审计 Skill 安装失败，用户确认兜底  | Step 5 使用内置规约 S-01~S-05              |
+| `all:done`       | 编码 + 审计 Skill 均已执行         | Step 4/5 跳过 Skill 流程                   |
 
 **Step 2：文档学习（按需）**
 
@@ -462,7 +500,10 @@ Step 7: 检查是否存在 outdated 模块，若有则询问：
 **Step 4：执行代码变更**
 
 - 符合 `.project/specs/` 规范
-- 按 §1.3 Skill 执行流程调用编码 Skill（前端 /frontend-coding，后端 /java-coding），按融合规则与 project-custom.md 融合，Skill 不可用则跳过 Skill，使用内置规约执行
+- 检查 index.md 当前模块的 skill-status：
+  - `pending` → 按 §1.3 Skill 执行流程调用编码 Skill（前端 /frontend-coding，后端 /java-coding），**必须输出 Skill 执行日志**，完成后更新 skill-status 为 `coding:done` 或 `coding:fallback`
+  - `coding:done` / `coding:fallback` / `all:done` → Skill 已执行，跳过 Skill 流程
+- 按融合规则与 project-custom.md 融合，Skill 不可用则由用户确认是否使用内置规约
 - 逐项遵守编码规约（融合优先级：project-custom.md > Skill 规范 > C-01~C-10）：
 
 | #    | 规约             | 要求                                          |
@@ -480,7 +521,11 @@ Step 7: 检查是否存在 outdated 模块，若有则询问：
 
 **Step 5：代码审计**
 
-- AI 自我审计，按 §1.3 Skill 执行流程调用 /code-audit Skill，按融合规则与 project-custom.md 融合，Skill 不可用则跳过 Skill，使用内置规约执行
+- 检查 index.md 当前模块的 skill-status：
+  - `coding:done` / `coding:fallback` → 按 §1.3 Skill 执行流程调用 /code-audit Skill，**必须输出 Skill 执行日志**，完成后更新 skill-status 为 `all:done`（或 `audit:fallback`）
+  - `all:done` → Skill 已执行，跳过 Skill 流程
+  - `pending` → Step 4 未执行，回退到 Step 4
+- 按融合规则与 project-custom.md 融合，Skill 不可用则由用户确认是否使用内置规约
 - 融合优先级：project-custom.md > Skill 规范 > S-01~S-05
 - 逐项检查，不通过项当场修复，修复后重新检查该项，直到全部通过
 - 全部通过后输出审计报告：
@@ -530,19 +575,19 @@ Step 7: 检查是否存在 outdated 模块，若有则询问：
 
 **前端验证：**
 
-| #    | 检查项     | 检查内容                                               |
-| ---- | ---------- | ------------------------------------------------------ |
-| T-01 | 交互逻辑   | 改动点涉及的每个页面中，相关按钮的交互逻辑是否正常     |
-| T-02 | 页面跳转   | 改动涉及的页面跳转路径是否正确                         |
-| T-03 | 页面渲染   | 改动涉及的页面是否正常渲染，无白屏/报错                |
+| #    | 检查项   | 检查内容                                           |
+| ---- | -------- | -------------------------------------------------- |
+| T-01 | 交互逻辑 | 改动点涉及的每个页面中，相关按钮的交互逻辑是否正常 |
+| T-02 | 页面跳转 | 改动涉及的页面跳转路径是否正确                     |
+| T-03 | 页面渲染 | 改动涉及的页面是否正常渲染，无白屏/报错            |
 
 **后端验证：**
 
-| #    | 检查项       | 检查内容                                             |
-| ---- | ------------ | ---------------------------------------------------- |
-| T-04 | 接口可用性   | mock 数据验证改动涉及的所有接口，保证不报错           |
-| T-05 | 边界覆盖     | 覆盖空值、超长、非法输入等边界场景                    |
-| T-06 | 返回值正确性 | 返回值结构和状态码符合 DES 定义                       |
+| #    | 检查项       | 检查内容                                    |
+| ---- | ------------ | ------------------------------------------- |
+| T-04 | 接口可用性   | mock 数据验证改动涉及的所有接口，保证不报错 |
+| T-05 | 边界覆盖     | 覆盖空值、超长、非法输入等边界场景          |
+| T-06 | 返回值正确性 | 返回值结构和状态码符合 DES 定义             |
 
 **Step 7：生成 Changelog**
 
@@ -581,7 +626,7 @@ Step 7: 检查是否存在 outdated 模块，若有则询问：
   context.md                    ← 每次对话必读，AI 自动维护
   specs/
     master/
-      index.md                  ← 模块状态总览，标准通道第一步读取
+      index.md                  ← 模块状态总览（含 sync-status + skill-status），标准通道第一步读取
       requirements/
         REQ-{xx}-{name}.md      ← 需求规格，变更前确认，变更后更新
       design/
@@ -605,4 +650,4 @@ Step 7: 检查是否存在 outdated 模块，若有则询问：
 
 ---
 
-*SDD Workflow v3.0 · 2026-03 — v2.9 基础上：§1.3 新增 Skill 执行流程（检查→安装→调用，统一所有触发点）；路由表新增触发时机列，区分项目初始化与编码阶段；新增前端脚手架 Skill（wap-project-creator）；初始化路由与编码路由解耦（/java-project-creator、/wap-project-creator）；所有 Skill 触发点统一引用 §1.3 执行流程；安装命令补充 --yes 参数*
+*SDD Workflow v3.0 · 2026-03 — v2.9 基础上：§1.3 新增 Skill 执行流程（检查→安装→调用→日志→状态，统一所有触发点）；新增 Skill 执行日志强制输出机制；新增 index.md skill-status 列追踪编码阶段 Skill 执行状态；Skill 安装失败统一询问用户（手动安装/兜底）；路由表新增触发时机列，区分项目初始化与编码阶段；新增前端脚手架 Skill（wap-project-creator）；初始化路由与编码路由解耦（/java-project-creator、/wap-project-creator）；所有 Skill 触发点统一引用 §1.3 执行流程；安装命令补充 --yes 参数*
