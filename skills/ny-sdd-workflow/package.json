@@ -1,0 +1,28 @@
+{
+  "name": "@nykj/ny-sdd-workflow",
+  "version": "3.0.0",
+  "description": "SDD Workflow v3.0 — AI 编码工作流规则，兼容多 AI 工具（Claude Code / Codex / Cursor / Copilot / Cline / Windsurf / Augment / Continue）",
+  "bin": {
+    "ny-sdd-workflow": "bin/cli.js"
+  },
+  "files": [
+    "bin/",
+    "templates/"
+  ],
+  "keywords": [
+    "ai",
+    "workflow",
+    "sdd",
+    "claude",
+    "codex",
+    "cursor",
+    "copilot",
+    "cline",
+    "windsurf"
+  ],
+  "author": "nykj",
+  "license": "UNLICENSED",
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}
