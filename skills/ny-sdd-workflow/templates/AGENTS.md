@@ -199,17 +199,18 @@ AI 生成 .project/ 目录（汇总所有信息）
 
 公司级规范以 Skill 形式封装，AI 在对应阶段必须自动安装并调用。
 
-**Skill 仓库**：`https://git.nykjsrv.cn/ai-coding/skills.git`
+**Skill 仓库（默认）**：`https://git.nykjsrv.cn/ai-coding/skills.git`
+**Skill 仓库（vant-vue3）**：`https://github.com/teachingai/full-stack-skills`
 **安装命令**：`npx skills add {仓库地址} --skill {skill名称} --yes`
 
-| 阶段           | 触发时机                     | Skill 路由            | skill 名称           |
-| -------------- | ---------------------------- | --------------------- | -------------------- |
-| PRD 审计       | §1.1 / §2.1                | /prd-audit            | prd-audit            |
-| 后端项目初始化 | §1.1 脚手架创建（仅新项目） | /java-project-creator | java-project-creator |
-| 前端项目初始化 | §1.1 脚手架创建（仅新项目） | /wap-project-creator  | wap-project-creator  |
-| 前端编码       | §3 Step 4 前端改动          | /frontend-coding      | vant-vue3            |
-| 后端编码       | §3 Step 4 后端改动          | /java-coding          | java-coding          |
-| 代码审计       | §3 Step 5                   | /code-audit           | code-audit           |
+| 阶段           | 触发时机                     | Skill 路由            | skill 名称           | 仓库                |
+| -------------- | ---------------------------- | --------------------- | -------------------- | ------------------- |
+| PRD 审计       | §1.1 / §2.1                | /prd-audit            | prd-audit            | 默认                |
+| 后端项目初始化 | §1.1 脚手架创建（仅新项目） | /java-project-creator | java-project-creator | 默认                |
+| 前端项目初始化 | §1.1 脚手架创建（仅新项目） | /wap-project-creator  | wap-project-creator  | 默认                |
+| 前端编码       | §3 Step 4 前端改动          | /frontend-coding      | vant-vue3            | vant-vue3 专用仓库  |
+| 后端编码       | §3 Step 4 后端改动          | /java-coding          | java-coding          | 默认                |
+| 代码审计       | §3 Step 5                   | /code-audit           | code-audit           | 默认                |
 
 **Skill 执行流程**（所有触发点必须统一严格遵守，不可跳过）：
 
@@ -217,7 +218,7 @@ AI 生成 .project/ 目录（汇总所有信息）
 1. 检查项目目录 .agents/skills/{skill名称}/ 是否已存在
    → 已存在 → 直接进入第 3 步（调用）
    → 不存在 → 进入第 2 步（安装）
-2. 安装：执行 npx skills add {仓库地址} --skill {skill名称} --yes
+2. 安装：根据路由表中的「仓库」列选择对应仓库地址，执行 npx skills add {仓库地址} --skill {skill名称} --yes
    → 安装成功 → 进入第 3 步
    → 安装失败 → 询问用户：
      A. 手动安装（用户自行执行命令后告知 AI）
