@@ -3,9 +3,11 @@
 const fs = require('fs')
 const path = require('path')
 
-const VERSION = '3.0.0'
+const VERSION = '3.4.0'
 const AGENTS_FILE = path.resolve('AGENTS.md')
 const TEMPLATE = path.join(__dirname, '..', 'templates', 'AGENTS.md')
+const WORKFLOW_SRC = path.join(__dirname, '..', 'templates', 'workflow')
+const WORKFLOW_DST = path.resolve('.agents', 'workflow')
 
 // 各工具 symlink 目标路径
 const TOOL_LINKS = [
@@ -34,6 +36,25 @@ function printBanner() {
   console.log(purple('  ╚══════╝╚═════╝ ╚═════╝ '))
   console.log(gray(`  SDD Workflow v${VERSION}`))
   console.log('')
+}
+
+// 递归复制目录
+function copyDirSync(src, dst) {
+  if (!fs.existsSync(src)) return false
+  if (!fs.existsSync(dst)) {
+    fs.mkdirSync(dst, { recursive: true })
+  }
+  const entries = fs.readdirSync(src, { withFileTypes: true })
+  for (const entry of entries) {
+    const srcPath = path.join(src, entry.name)
+    const dstPath = path.join(dst, entry.name)
+    if (entry.isDirectory()) {
+      copyDirSync(srcPath, dstPath)
+    } else {
+      fs.copyFileSync(srcPath, dstPath)
+    }
+  }
+  return true
 }
 
 // 创建 symlink（兼容 Windows 用复制）
@@ -81,46 +102,97 @@ function init() {
     console.log(green('  ✅ AGENTS.md') + gray(' (Claude Code / Codex 原生读取)'))
   }
 
-  // 2. 创建各工具 symlink
+  // 2. 复制 workflow 子文件
   console.log('')
-  console.log(bold('  创建工具指令文件...\n'))
-
-  const isWindows = process.platform === 'win32'
-  const method = isWindows ? '复制' : 'symlink'
-
-  for (const { path: targetPath, tool } of TOOL_LINKS) {
-    const result = createLink(AGENTS_FILE, targetPath)
-    switch (result) {
-      case 'created':
-        console.log(green(`  ✅ ${targetPath}`) + gray(` → AGENTS.md (${tool}, ${method})`))
-        break
-      case 'symlink_exists':
-        console.log(gray(`  ⏭  ${targetPath} (已是 symlink)`))
-        break
-      case 'file_exists':
-        console.log(yellow(`  ⚠  ${targetPath} (已存在且非 symlink，跳过)`))
-        break
+  if (copyDirSync(WORKFLOW_SRC, WORKFLOW_DST)) {
+    const files = fs.readdirSync(WORKFLOW_DST)
+    console.log(green(`  ✅ .agents/workflow/`) + gray(` (${files.length} 个工作流子文件)`))
+    for (const f of files) {
+      console.log(gray(`     · ${f}`))
     }
+  } else {
+    console.log(yellow('  ⚠  workflow 模板目录不存在，跳过'))
   }
 
-  // 3. 输出 .gitignore 建议
+  // 3. 询问用户选择同步的 AI 工具
   console.log('')
-  console.log(bold('  .gitignore 建议：\n'))
-  console.log(gray('  # SDD Workflow symlink（由 ny-sdd-workflow 生成，不提交）'))
-  console.log(gray('  .cursorrules'))
-  console.log(gray('  .clinerules'))
-  console.log(gray('  .windsurfrules'))
-  console.log(gray('  # AGENTS.md 需要提交（源文件）'))
+  console.log(bold('  AI 工具同步\n'))
+  console.log('  是否将 AGENTS.md 同步到其他 AI 编码工具？')
+  console.log('  请通过 --tools 参数指定（多个用逗号分隔，A=全选，N=跳过）：')
+  console.log('')
+  for (let i = 0; i < TOOL_LINKS.length; i++) {
+    console.log(gray(`    ${i + 1}. ${TOOL_LINKS[i].tool.padEnd(15)} → ${TOOL_LINKS[i].path}`))
+  }
+  console.log('')
 
-  // 4. 完成
+  // 解析 --tools 参数
+  const toolsArg = process.argv.find(a => a.startsWith('--tools='))
+  const toolsValue = toolsArg ? toolsArg.split('=')[1] : 'N'
+
+  let selectedIndexes = []
+  if (toolsValue.toUpperCase() === 'A') {
+    selectedIndexes = TOOL_LINKS.map((_, i) => i)
+  } else if (toolsValue.toUpperCase() !== 'N') {
+    selectedIndexes = toolsValue.split(',').map(s => parseInt(s.trim()) - 1).filter(i => i >= 0 && i < TOOL_LINKS.length)
+  }
+
+  let createdCount = 0
+  if (selectedIndexes.length > 0) {
+    const isWindows = process.platform === 'win32'
+    const method = isWindows ? '复制' : 'symlink'
+
+    for (const i of selectedIndexes) {
+      const { path: targetPath, tool } = TOOL_LINKS[i]
+      const result = createLink(AGENTS_FILE, targetPath)
+      switch (result) {
+        case 'created':
+          console.log(green(`  ✅ ${targetPath}`) + gray(` → AGENTS.md (${tool}, ${method})`))
+          createdCount++
+          break
+        case 'symlink_exists':
+          console.log(gray(`  ⏭  ${targetPath} (已是 symlink)`))
+          break
+        case 'file_exists':
+          console.log(yellow(`  ⚠  ${targetPath} (已存在且非 symlink，跳过)`))
+          break
+      }
+    }
+
+    // 未选择的工具
+    for (let i = 0; i < TOOL_LINKS.length; i++) {
+      if (!selectedIndexes.includes(i)) {
+        console.log(gray(`  ⏭  ${TOOL_LINKS[i].tool} (未同步)`))
+      }
+    }
+  } else {
+    console.log(gray('  ⏭  跳过工具同步，仅 AGENTS.md 生效（Claude Code / Codex 原生读取）'))
+  }
+
+  // 4. 输出 .gitignore 建议（仅在创建了 symlink 时）
+  if (createdCount > 0) {
+    console.log('')
+    console.log(bold('  .gitignore 建议：\n'))
+    console.log(gray('  # SDD Workflow symlink（由 ny-sdd-workflow 生成，不提交）'))
+    console.log(gray('  .cursorrules'))
+    console.log(gray('  .clinerules'))
+    console.log(gray('  .windsurfrules'))
+    console.log(gray('  # AGENTS.md 需要提交（源文件）'))
+  }
+
+  // 5. 完成
   console.log('')
   console.log(green(bold('  ✅ 初始化完成！\n')))
-  console.log(bold('  支持的工具：'))
+  console.log(bold('  已安装：'))
   console.log('  · Claude Code    — AGENTS.md (原生)')
   console.log('  · OpenAI Codex   — AGENTS.md (原生)')
-  for (const { path: p, tool } of TOOL_LINKS) {
-    console.log(`  · ${tool.padEnd(15)}— ${p}`)
+  console.log(`  · .agents/workflow/ (${fs.existsSync(WORKFLOW_DST) ? fs.readdirSync(WORKFLOW_DST).length : 0} 个子文件)`)
+  if (selectedIndexes.length > 0) {
+    for (const i of selectedIndexes) {
+      console.log(`  · ${TOOL_LINKS[i].tool.padEnd(15)}— ${TOOL_LINKS[i].path}`)
+    }
   }
+  console.log('')
+  console.log(gray('  提示：如需后续添加其他工具同步，重新运行 init --tools=A'))
   console.log('')
 }
 
@@ -145,6 +217,11 @@ function update() {
   // 覆盖
   fs.copyFileSync(TEMPLATE, AGENTS_FILE)
   console.log(green('  ✅ AGENTS.md 已更新到 v' + VERSION))
+
+  // 更新 workflow 子文件
+  if (copyDirSync(WORKFLOW_SRC, WORKFLOW_DST)) {
+    console.log(green('  ✅ .agents/workflow/ 已同步更新'))
+  }
 
   // Windows 需要重新复制到各工具
   if (process.platform === 'win32') {

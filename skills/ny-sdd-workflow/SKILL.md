@@ -14,7 +14,7 @@ description: >
 
 # SDD Workflow 初始化 Skill
 
-本 skill 的目标是：将 SDD Workflow v3.0 工作流规则安装到当前项目，并自动适配多个 AI 编码工具。
+本 skill 的目标是：将 SDD Workflow v3.4 工作流规则安装到当前项目（主文件 AGENTS.md + .agents/workflow/ 子文件），并自动适配多个 AI 编码工具。
 
 ---
 
@@ -43,38 +43,44 @@ description: >
 - 已存在 → 提示用户「AGENTS.md 已存在，跳过。如需更新请选 B」
 - 不存在 → 将下方「AGENTS.md 模板内容」部分的完整内容写入项目根目录 `AGENTS.md`
 
-**Step 2：创建各 AI 工具 symlink**
+**Step 2：询问用户是否同步到其他 AI 工具**
 
-执行以下 bash 命令，为每个工具创建指向 AGENTS.md 的 symlink：
+```
+【AI 工具同步】
+是否将 AGENTS.md 同步到其他 AI 编码工具？（创建 symlink 指向 AGENTS.md）
+请选择需要同步的工具（多选，用逗号分隔，或输入 A 全选，N 跳过）：
+  1. Cursor        → .cursor/rules/ny-sdd-workflow.md
+  2. GitHub Copilot → .github/copilot-instructions.md
+  3. Cline         → .clinerules
+  4. Windsurf      → .windsurfrules
+  5. Augment       → .augment/rules/ny-sdd-workflow.md
+  6. Continue      → .continue/rules/ny-sdd-workflow.md
+```
+
+用户选择后，仅为选中的工具创建 symlink：
 
 ```bash
 # 获取 AGENTS.md 绝对路径
 AGENTS_FILE="$(pwd)/AGENTS.md"
 
+# 根据用户选择，为对应工具创建 symlink（以下为各工具命令，按选择执行）
 # Cursor
-mkdir -p .cursor/rules
-[ ! -e .cursor/rules/ny-sdd-workflow.md ] && ln -s "$AGENTS_FILE" .cursor/rules/ny-sdd-workflow.md
-
+mkdir -p .cursor/rules && [ ! -e .cursor/rules/ny-sdd-workflow.md ] && ln -s "$AGENTS_FILE" .cursor/rules/ny-sdd-workflow.md
 # GitHub Copilot
-mkdir -p .github
-[ ! -e .github/copilot-instructions.md ] && ln -s "$AGENTS_FILE" .github/copilot-instructions.md
-
+mkdir -p .github && [ ! -e .github/copilot-instructions.md ] && ln -s "$AGENTS_FILE" .github/copilot-instructions.md
 # Cline
 [ ! -e .clinerules ] && ln -s "$AGENTS_FILE" .clinerules
-
 # Windsurf
 [ ! -e .windsurfrules ] && ln -s "$AGENTS_FILE" .windsurfrules
-
 # Augment
-mkdir -p .augment/rules
-[ ! -e .augment/rules/ny-sdd-workflow.md ] && ln -s "$AGENTS_FILE" .augment/rules/ny-sdd-workflow.md
-
+mkdir -p .augment/rules && [ ! -e .augment/rules/ny-sdd-workflow.md ] && ln -s "$AGENTS_FILE" .augment/rules/ny-sdd-workflow.md
 # Continue
-mkdir -p .continue/rules
-[ ! -e .continue/rules/ny-sdd-workflow.md ] && ln -s "$AGENTS_FILE" .continue/rules/ny-sdd-workflow.md
+mkdir -p .continue/rules && [ ! -e .continue/rules/ny-sdd-workflow.md ] && ln -s "$AGENTS_FILE" .continue/rules/ny-sdd-workflow.md
 ```
 
-**Step 3：输出 .gitignore 建议**
+用户选择 N（跳过）→ 不创建任何 symlink，仅 AGENTS.md 生效（Claude Code / Codex 原生读取）。
+
+**Step 3：输出 .gitignore 建议**（仅在创建了 symlink 时提示）
 
 提示用户将以下内容添加到 `.gitignore`（如尚未包含）：
 
@@ -92,16 +98,14 @@ mkdir -p .continue/rules
 【SDD Workflow 初始化完成】
 
 ✅ AGENTS.md（Claude Code / Codex 原生读取）
-✅ .cursor/rules/ny-sdd-workflow.md → AGENTS.md（Cursor）
-✅ .github/copilot-instructions.md → AGENTS.md（GitHub Copilot）
-✅ .clinerules → AGENTS.md（Cline）
-✅ .windsurfrules → AGENTS.md（Windsurf）
-✅ .augment/rules/ny-sdd-workflow.md → AGENTS.md（Augment）
-✅ .continue/rules/ny-sdd-workflow.md → AGENTS.md（Continue）
+✅ .agents/workflow/（6 个工作流子文件）
+{用户选择的工具列表，每项一行，格式：✅ {路径} → AGENTS.md（{工具名}）}
+{未选择的工具：⏭ {工具名}（未同步）}
 
 下一步：
-  · AGENTS.md 已生效，AI 将按 SDD Workflow v3.0 执行
+  · AGENTS.md + .agents/workflow/ 已生效，AI 将按 SDD Workflow v3.4 执行
   · 如需定制项目铁律，编辑 .project/specs/rules/project-custom.md
+  · 如需后续添加其他工具同步，重新运行初始化
 ```
 
 ### B. 更新
