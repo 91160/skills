@@ -1,10 +1,8 @@
-# 人工批注同步 & 需求变更（Spec Sync）
+### 2.4.5 人工批注同步 & 需求变更（Spec Sync）
 
-用户可随时触发 specs 同步，支持三种触发源。
+用户可随时触发 specs 同步，支持三种触发源：
 
----
-
-## 触发方式
+**触发方式**：
 
 - **A. specs 文件变更**：用户说"我改了 XXX" / "重新读取 XXX" / "specs 有更新" / "REQ/DES 有改动" / "我更新了文档" → 直接进入 Step 1
 - **B. PRD 需求变更**：用户说"需求变了" / "PRD 改了" / "PRD 更新了" / "新增需求 XXX" / "新增模块 XXX" / "需求有调整" / "功能改了" / "加个功能" / "删掉 XXX 功能" / "XXX 模块要改" → 先执行 Step 0，再进入 Step 1
@@ -13,14 +11,12 @@
   - `.docs/tech/` 下新增或变更 → 执行 Step 0.5
   - `.docs/` 根下文件 → 按内容判断归属，同上分流
 
----
-
-## 执行步骤
+**AI 必须要执行的步骤**：
 
 ```
 Step 0: PRD 变更识别（仅触发源 B 执行）
   → AI 重读 PRD 变更内容
-  → 对变更内容执行 PRD 审计（按质量标准 PRD 审计标准，调用 /prd-audit Skill 或兜底 6 维度），P0 问题必须解决后才继续
+  → 对变更内容执行 PRD 审计（按 §3.5.1，调用 /prd-audit Skill 或兜底 6 维度），P0 问题必须解决后才继续
   → 判断变更类型：
     a. 新增模块：
        - index.md 新增行（编号、模块名、类型、优先级、sync-status: pending、skill-status: pending）
@@ -30,29 +26,29 @@ Step 0: PRD 变更识别（仅触发源 B 执行）
        - 创建 REQ + DES 文件
     b. 已有模块变更：
        - 定位受影响的 REQ + DES
-       - 更新 REQ（需求描述、验收标准）→ review-status 重置为 draft
-       - 更新 DES（技术方案、接口设计）→ review-status 重置为 draft
+       - 更新 REQ（需求描述、验收标准）→ `review-status` 重置为 `draft`
+       - 更新 DES（技术方案、接口设计）→ `review-status` 重置为 `draft`
        - 可能需要重新拆子任务 → 同步更新 task.md（新增/删除/修改子任务 + 更新模块总览计数）
   → 输出变更摘要，用户确认后
   → 同步更新 project-profile.md「业务架构」「业务流程」区块（如变更涉及业务流程，仅旧项目）
   → 同步更新 project-profile.md「模块架构索引」+ 对应 patterns/*.md（如变更涉及页面/模块新增/删除/架构调整）
   → 同步更新 .outdocs/project-overview.md 的业务相关章节（如变更涉及业务流程）
   → 写入 .outdocs/prd-change-log.md（追加一条变更记录）
+
+  prd-change-log.md 记录格式：
 ```
 
-**prd-change-log.md 记录格式**：
+### 变更 —
 
-```markdown
-### 变更 — {YYYY-MM-DD}
 - **变更类型**：{新增模块 / 已有模块变更}
 - **变更原因**：{为什么改，谁提出}
 - **变更内容**：{具体改了什么}
 - **影响模块**：{受影响的模块编号和名称}
 - **影响范围**：{REQ/DES/代码/api-doc/dev-order/task.md 哪些受影响}
 - **进度影响**：{dev-order 是否调整，当前开发是否受阻}
-```
 
 ```
+
 Step 0.5: 技术文档变更识别（仅触发源 C 执行）
   → 重新扫描 .docs/，与 project-profile.md「外部依赖」索引对比，识别变更内容
   → 判断影响：
@@ -89,22 +85,18 @@ Step 7: 检查是否存在 outdated 模块，若有则询问：
   B. 稍后处理（保持 outdated，下次开发时自动触发）
 ```
 
----
+**级联规则**：
 
-## 级联规则
+| 被改文件            | 可能影响的关联文件                                                                                         |
+| ------------------- | ---------------------------------------------------------------------------------------------------------- |
+| requirements/REQ-xx | → 对应 design/DES-xx → index.md                                                                          |
+| design/DES-xx       | → 对应 requirements/REQ-xx → index.md → context.md → .outdocs/api-doc.md 对应模块章节（如含 API 定义） |
+| index.md            | → context.md → task.md（模块状态同步）                                                                   |
+| task.md             | → index.md（模块状态同步）                                                                                |
+| context.md          | → 无级联（终端文件）                                                                                      |
+| project-profile.md  | → 铁律变更时检查所有 DES 是否冲突                                                                         |
 
-| 被改文件 | 可能影响的关联文件 |
-|---------|-------------------|
-| requirements/REQ-xx | → 对应 design/DES-xx → index.md |
-| design/DES-xx | → 对应 requirements/REQ-xx → index.md → context.md → .outdocs/api-doc.md 对应模块章节（如含 API 定义） |
-| index.md | → context.md → task.md（模块状态同步） |
-| task.md | → index.md（模块状态同步） |
-| context.md | → 无级联（终端文件） |
-| project-profile.md | → 铁律变更时检查所有 DES 是否冲突 |
-
----
-
-## 留痕规则
+**留痕规则**：
 
 所有改动必须记录到 `.project/specs/change-log-specs.md`，格式：
 
@@ -115,3 +107,4 @@ Step 7: 检查是否存在 outdated 模块，若有则询问：
 - 操作人标注「用户」或「AI」
 - 用户改动：记录改了什么
 - AI 级联改动：记录改了哪些文件、改了什么、为什么改
+

@@ -41,7 +41,7 @@ description: >
 
 检查项目根目录是否已存在 AGENTS.md：
 - 已存在 → 提示用户「AGENTS.md 已存在，跳过。如需更新请选 B」
-- 不存在 → 将下方「AGENTS.md 模板内容」部分的完整内容写入项目根目录 `AGENTS.md`
+- 不存在 → 按下方「AGENTS.md 模板组装」流程，从骨架 + 子文件组装完整内容写入项目根目录 `AGENTS.md`
 
 **Step 2：询问用户是否同步到其他 AI 工具**
 
@@ -110,8 +110,8 @@ mkdir -p .continue/rules && [ ! -e .continue/rules/ny-sdd-workflow.md ] && ln -s
 
 ### B. 更新
 
-1. 将下方「AGENTS.md 模板内容」覆盖写入项目根目录 `AGENTS.md`
-2. 提示：「AGENTS.md 已更新到 v3.0，symlink 自动同步所有工具」
+1. 按下方「AGENTS.md 模板组装」流程，从骨架 + 子文件组装完整内容覆盖写入项目根目录 `AGENTS.md`
+2. 提示：「AGENTS.md 已更新到最新版本，symlink 自动同步所有工具」
 
 ### C. 查看状态
 
@@ -138,19 +138,35 @@ echo "AGENTS.md 已保留"
 
 ---
 
-## AGENTS.md 模板内容
+## AGENTS.md 模板组装
 
-> **AI 执行说明**：执行初始化（A）或更新（B）时，将以下 `<agents-template>` 标签内的完整内容写入项目根目录 AGENTS.md。
+> **AI 执行说明**：执行初始化（A）或更新（B）时，按以下步骤组装完整 AGENTS.md 并写入项目根目录。
 
-<agents-template>
+**模板文件结构**：
 
-此处放置 SDD Workflow v3.0 的完整 AGENTS.md 内容。
-由于内容较长，实际使用时应读取同仓库目录下的 templates/AGENTS.md 文件。
+skill 目录 `templates/` 下包含：
+- `AGENTS.md` — 骨架文件，包含 6 个 `<!-- @include: workflow/xxx.md -->` 标记
+- `workflow/` — 6 个子文件，对应骨架中的 include 标记：
+  - `profile-template.md` — §1.2.5 project-profile.md 模板
+  - `skill-config.md` — §1.3 Skill 路由表与执行流程
+  - `docs-and-prototype.md` — §1.4 技术文档与原型图处理规则
+  - `spec-sync.md` — §2.4.5 人工批注同步与需求变更
+  - `quality-standards.md` — §3.5 质量标准体系
+  - `overview-template.md` — §4.1 project-overview.md 输出结构模板
 
-AI 执行时：读取 .agents/skills/ny-sdd-workflow/ 目录下的 templates/AGENTS.md，
-如果不存在则提示用户「模板文件缺失，请重新安装 skill」。
+**组装流程**：
 
-</agents-template>
+```
+1. 读取 templates/AGENTS.md 骨架文件
+   → 不存在 → 提示用户「模板文件缺失，请重新安装 skill」
+2. 扫描骨架中所有 <!-- @include: workflow/xxx.md --> 标记
+3. 对每个标记，读取 templates/workflow/xxx.md 子文件内容
+   → 子文件不存在 → 提示用户「子文件 xxx.md 缺失，请重新安装 skill」
+4. 将标记（含其所在行的换行符）替换为子文件完整内容
+5. 将组装后的完整内容写入项目根目录 AGENTS.md
+```
+
+**关键要求**：组装后的 AGENTS.md 必须是完整的单体文件，所有 AI 工具（Claude Code / Cursor / Copilot 等）可直接读取，无需再解析 include 标记。
 
 ---
 
