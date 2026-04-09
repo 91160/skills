@@ -1,26 +1,8 @@
-# project-profile.md 完整模板
+### 1.2.5 project-profile.md 模板
 
 项目铁律由团队人工填写，AI 不自动生成。其余区块由 AI 在初始化时自动填写。
 
-**内部公共能力记录格式要求**：每项公共能力写入时必须包含三要素——路径、用法、禁止：
-
-```
-- {能力名}：`{文件路径}`
-  用法：`{import 语句}; {调用示例}`
-  禁止：{不允许的替代做法}
-```
-
-示例：
-
-```
-- HTTP 请求：`src/utils/request.ts`
-  用法：`import { instance } from '@/utils/request'; instance.post<T>(url, params)`
-  禁止：直接 import axios 或 fetch
-```
-
----
-
-## 模板正文
+**完整模板：**
 
 ```markdown
 # 一、项目级（始终加载）
@@ -229,4 +211,11 @@
 | 模块 | 索引文件 | 一句话摘要 |
 | ---- | -------- | ---------- |
 | {模块名} | patterns/{name}.md | {核心模式，如：Agent 注册 + handler 管线 + agentResponseList} |
+
 ```
+
+**AI 执行规则**：
+
+- 每次标准通道和快速通道开始前必须先读取铁律（执行详见 §3 Step 0）
+- 未收到用户明确指示不得继续执行
+

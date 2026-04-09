@@ -1,33 +1,21 @@
-# Skill 路由与执行流程
+### 1.3 Skill 路由表
 
 公司级规范以 Skill 形式封装，AI 在对应阶段必须自动安装并调用。
 
----
+**Skill 仓库（默认）**：`https://git.nykjsrv.cn/ai-coding/skills.git`
+**Skill 仓库（vant-vue3）**：`https://github.com/teachingai/full-stack-skills`
+**安装命令**：`npx skills add {仓库地址} --skill {skill名称} --yes`
 
-## Skill 仓库
+| 阶段           | 触发时机                     | Skill 路由            | skill 名称           | 仓库               |
+| -------------- | ---------------------------- | --------------------- | -------------------- | ------------------ |
+| PRD 审计       | §1.1 / §2.1                | /prd-audit            | prd-audit            | 默认               |
+| 后端项目初始化 | §1.1 脚手架创建（仅新项目） | /java-project-creator | java-project-creator | 默认               |
+| 前端项目初始化 | §1.1 脚手架创建（仅新项目） | /wap-project-creator  | wap-project-creator  | 默认               |
+| 前端编码       | §3 Step 4 前端改动          | /frontend-coding      | vant-vue3            | vant-vue3 专用仓库 |
+| 后端编码       | §3 Step 4 后端改动          | /java-coding          | java-coding          | 默认               |
+| 代码审计       | §3 Step 5                   | /code-audit           | code-audit           | 默认               |
 
-- **默认仓库**：`https://git.nykjsrv.cn/ai-coding/skills.git`
-- **vant-vue3 专用仓库**：`https://github.com/teachingai/full-stack-skills`
-- **安装命令**：`npx skills add {仓库地址} --skill {skill名称} --yes`
-
----
-
-## Skill 路由表
-
-| 阶段 | 触发时机 | Skill 路由 | skill 名称 | 仓库 |
-|------|---------|-----------|-----------|------|
-| PRD 审计 | §1.1 / §2.1 | /prd-audit | prd-audit | 默认 |
-| 后端项目初始化 | §1.1 脚手架创建（仅新项目） | /java-project-creator | java-project-creator | 默认 |
-| 前端项目初始化 | §1.1 脚手架创建（仅新项目） | /wap-project-creator | wap-project-creator | 默认 |
-| 前端编码 | §3 Step 4 前端改动 | /frontend-coding | vant-vue3 | vant-vue3 专用仓库 |
-| 后端编码 | §3 Step 4 后端改动 | /java-coding | java-coding | 默认 |
-| 代码审计 | §3 Step 5 | /code-audit | code-audit | 默认 |
-
----
-
-## Skill 执行流程
-
-所有触发点必须统一严格遵守，不可跳过：
+**Skill 执行流程**（所有触发点必须统一严格遵守，不可跳过）：
 
 ```
 1. 检查项目目录 .agents/skills/{skill名称}/ 是否已存在
@@ -44,11 +32,7 @@
 5. 更新状态（§3 编码阶段的 Skill）：更新 index.md 对应模块的 skill-status
 ```
 
----
-
-## Skill 执行日志格式
-
-每次执行 Skill 流程后必须输出，禁止省略：
+**Skill 执行日志格式**（每次执行 Skill 流程后必须输出，禁止省略）：
 
 ```
 【Skill 执行日志】
@@ -59,9 +43,7 @@
   执行: {调用Skill / 内置兜底({兜底方式})}
 ```
 
----
-
-## 匹配规则
+**匹配规则**：
 
 - 根据 project-profile.md「技术栈」声明 + 当前改动文件类型，匹配对应 Skill
 - Skill 安装失败 → 询问用户（手动安装 / 使用内置默认兜底），由用户确认后继续
@@ -69,25 +51,10 @@
 - **编码阶段**：前端改动调用 /frontend-coding，后端改动调用 /java-coding（§3 Step 4）
 - **代码审计**：前后端统一调用 /code-audit（§3 Step 5）
 
----
-
-## 融合规则
-
-project-profile.md 与 Skill 的关系：
+**融合规则**（project-profile.md 与 Skill 的关系）：
 
 1. 读取 project-profile.md（铁律 + 项目规范）
 2. 调用 Skill 获取公司级规范
 3. 冲突项 → 以 project-profile.md 为准
 4. project-profile.md 未提及 → 用 Skill 规范
 5. 两者都未覆盖 → 用内置默认
-
----
-
-## 门禁 Skill 安装检查规则
-
-根据 project-profile.md「技术栈」声明，检查以下目录是否存在：
-
-- 技术栈含前端 → `.agents/skills/vant-vue3/`
-- 技术栈含 Java → `.agents/skills/java-coding/`
-- 所有项目 → `.agents/skills/code-audit/`
-- 任一缺失 → 按上述执行流程安装，安装失败询问用户（手动安装 / 确认兜底）
