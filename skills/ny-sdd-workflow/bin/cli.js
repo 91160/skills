@@ -3,11 +3,10 @@
 const fs = require('fs')
 const path = require('path')
 
-const VERSION = '3.4.0'
+const VERSION = '3.6.0'
 const AGENTS_FILE = path.resolve('AGENTS.md')
 const TEMPLATE = path.join(__dirname, '..', 'templates', 'AGENTS.md')
-const WORKFLOW_SRC = path.join(__dirname, '..', 'templates', 'workflow')
-const WORKFLOW_DST = path.resolve('.agents', 'workflow')
+const SKILL_PKG_DIR = path.join(__dirname, '..')
 
 // 各工具 symlink 目标路径
 const TOOL_LINKS = [
@@ -38,23 +37,33 @@ function printBanner() {
   console.log('')
 }
 
-// 递归复制目录
-function copyDirSync(src, dst) {
-  if (!fs.existsSync(src)) return false
-  if (!fs.existsSync(dst)) {
-    fs.mkdirSync(dst, { recursive: true })
+/**
+ * 解析 skill 安装路径，返回适合写入 AGENTS.md 的引用路径
+ * - 项目内安装（.agents/skills/ny-sdd-workflow/）→ 返回相对路径
+ * - 全局安装（~/.claude/skills/ 或其他位置）→ 返回绝对路径
+ */
+function resolveSkillDir() {
+  const cwd = process.cwd()
+  const skillAbsolute = path.resolve(SKILL_PKG_DIR)
+
+  if (skillAbsolute.startsWith(cwd + path.sep)) {
+    return path.relative(cwd, skillAbsolute)
   }
-  const entries = fs.readdirSync(src, { withFileTypes: true })
-  for (const entry of entries) {
-    const srcPath = path.join(src, entry.name)
-    const dstPath = path.join(dst, entry.name)
-    if (entry.isDirectory()) {
-      copyDirSync(srcPath, dstPath)
-    } else {
-      fs.copyFileSync(srcPath, dstPath)
-    }
+
+  return skillAbsolute
+}
+
+/**
+ * 读取模板并替换 {SKILL_DIR} 占位符
+ */
+function renderTemplate(skillDir) {
+  if (!fs.existsSync(TEMPLATE)) {
+    console.error('  ❌ 模板文件不存在: ' + TEMPLATE)
+    process.exit(1)
   }
-  return true
+  let content = fs.readFileSync(TEMPLATE, 'utf8')
+  content = content.replace(/\{SKILL_DIR\}/g, skillDir)
+  return content
 }
 
 // 创建 symlink（兼容 Windows 用复制）
@@ -72,12 +81,10 @@ function createLink(source, target) {
     return 'file_exists'
   }
 
-  // Windows 不支持 symlink，用复制兜底
   const isWindows = process.platform === 'win32'
   if (isWindows) {
     fs.copyFileSync(source, target)
   } else {
-    // 计算相对路径用于 symlink
     const relPath = path.relative(dir, source)
     fs.symlinkSync(relPath, target)
   }
@@ -89,50 +96,65 @@ function init() {
   printBanner()
   console.log(bold('  初始化 SDD Workflow...\n'))
 
-  // 1. 复制 AGENTS.md 到项目根目录
+  // 1. 解析 skill 路径
+  const skillDir = resolveSkillDir()
+  console.log(gray(`  Skill 路径: ${skillDir}`))
+  console.log('')
+
+  // 2. 生成 AGENTS.md（模板 + 路径替换）
   if (fs.existsSync(AGENTS_FILE)) {
-    console.log(yellow('  ⚠  AGENTS.md 已存在，跳过复制'))
+    console.log(yellow('  ⚠  AGENTS.md 已存在，跳过'))
     console.log(gray('     如需更新请使用: npx @nykj/ny-sdd-workflow update\n'))
   } else {
-    if (!fs.existsSync(TEMPLATE)) {
-      console.error('  ❌ 模板文件不存在: ' + TEMPLATE)
-      process.exit(1)
-    }
-    fs.copyFileSync(TEMPLATE, AGENTS_FILE)
-    console.log(green('  ✅ AGENTS.md') + gray(' (Claude Code / Codex 原生读取)'))
+    const content = renderTemplate(skillDir)
+    fs.writeFileSync(AGENTS_FILE, content, 'utf8')
+    console.log(green('  ✅ AGENTS.md') + gray(` (~170行核心规则，引用 ${skillDir}/rules/)`))
   }
 
-  // 2. 复制 workflow 子文件
+  // 3. 验证 rules/ 文件完整性
   console.log('')
-  if (copyDirSync(WORKFLOW_SRC, WORKFLOW_DST)) {
-    const files = fs.readdirSync(WORKFLOW_DST)
-    console.log(green(`  ✅ .agents/workflow/`) + gray(` (${files.length} 个工作流子文件)`))
-    for (const f of files) {
-      console.log(gray(`     · ${f}`))
+  const ruleFiles = [
+    'rules/phase-init.md', 'rules/phase-spec.md', 'rules/phase-coding.md',
+    'rules/phase-archive.md', 'rules/quality-standards.md', 'rules/skill-routing.md',
+  ]
+  const templateFiles = [
+    'templates/project-profile.tpl.md', 'templates/project-overview.tpl.md',
+  ]
+  let allPresent = true
+  for (const f of [...ruleFiles, ...templateFiles]) {
+    const fullPath = path.join(SKILL_PKG_DIR, f)
+    if (!fs.existsSync(fullPath)) {
+      console.log(yellow(`  ⚠  缺失: ${f}`))
+      allPresent = false
     }
-  } else {
-    console.log(yellow('  ⚠  workflow 模板目录不存在，跳过'))
+  }
+  if (allPresent) {
+    console.log(green(`  ✅ ${skillDir}/rules/`) + gray(` (${ruleFiles.length} 个阶段规则)`))
+    console.log(green(`  ✅ ${skillDir}/templates/`) + gray(` (${templateFiles.length} 个模板)`))
   }
 
-  // 3. 询问用户选择同步的 AI 工具
+  // 4. AI 工具同步
   console.log('')
   console.log(bold('  AI 工具同步\n'))
-  console.log('  是否将 AGENTS.md 同步到其他 AI 编码工具？')
-  console.log('  请通过 --tools 参数指定（多个用逗号分隔，A=全选，N=跳过）：')
-  console.log('')
-  for (let i = 0; i < TOOL_LINKS.length; i++) {
-    console.log(gray(`    ${i + 1}. ${TOOL_LINKS[i].tool.padEnd(15)} → ${TOOL_LINKS[i].path}`))
-  }
-  console.log('')
 
-  // 解析 --tools 参数
   const toolsArg = process.argv.find(a => a.startsWith('--tools='))
-  const toolsValue = toolsArg ? toolsArg.split('=')[1] : 'N'
+  const toolsValue = toolsArg ? toolsArg.split('=')[1] : null
+
+  if (!toolsValue) {
+    console.log('  请通过 --tools 参数指定（多个用逗号分隔，A=全选，N=跳过）：')
+    console.log('')
+    for (let i = 0; i < TOOL_LINKS.length; i++) {
+      console.log(gray(`    ${i + 1}. ${TOOL_LINKS[i].tool.padEnd(15)} → ${TOOL_LINKS[i].path}`))
+    }
+    console.log('')
+    console.log(gray('  示例: npx @nykj/ny-sdd-workflow init --tools=A'))
+    console.log('')
+  }
 
   let selectedIndexes = []
-  if (toolsValue.toUpperCase() === 'A') {
+  if (toolsValue && toolsValue.toUpperCase() === 'A') {
     selectedIndexes = TOOL_LINKS.map((_, i) => i)
-  } else if (toolsValue.toUpperCase() !== 'N') {
+  } else if (toolsValue && toolsValue.toUpperCase() !== 'N') {
     selectedIndexes = toolsValue.split(',').map(s => parseInt(s.trim()) - 1).filter(i => i >= 0 && i < TOOL_LINKS.length)
   }
 
@@ -158,41 +180,34 @@ function init() {
       }
     }
 
-    // 未选择的工具
     for (let i = 0; i < TOOL_LINKS.length; i++) {
       if (!selectedIndexes.includes(i)) {
         console.log(gray(`  ⏭  ${TOOL_LINKS[i].tool} (未同步)`))
       }
     }
-  } else {
-    console.log(gray('  ⏭  跳过工具同步，仅 AGENTS.md 生效（Claude Code / Codex 原生读取）'))
+  } else if (toolsValue) {
+    console.log(gray('  ⏭  跳过工具同步，仅 AGENTS.md 生效'))
   }
 
-  // 4. 输出 .gitignore 建议（仅在创建了 symlink 时）
+  // 5. .gitignore 建议
   if (createdCount > 0) {
     console.log('')
     console.log(bold('  .gitignore 建议：\n'))
-    console.log(gray('  # SDD Workflow symlink（由 ny-sdd-workflow 生成，不提交）'))
+    console.log(gray('  # SDD Workflow symlink（不提交）'))
     console.log(gray('  .cursorrules'))
     console.log(gray('  .clinerules'))
     console.log(gray('  .windsurfrules'))
-    console.log(gray('  # AGENTS.md 需要提交（源文件）'))
   }
 
-  // 5. 完成
+  // 6. 完成
   console.log('')
   console.log(green(bold('  ✅ 初始化完成！\n')))
-  console.log(bold('  已安装：'))
-  console.log('  · Claude Code    — AGENTS.md (原生)')
-  console.log('  · OpenAI Codex   — AGENTS.md (原生)')
-  console.log(`  · .agents/workflow/ (${fs.existsSync(WORKFLOW_DST) ? fs.readdirSync(WORKFLOW_DST).length : 0} 个子文件)`)
-  if (selectedIndexes.length > 0) {
-    for (const i of selectedIndexes) {
-      console.log(`  · ${TOOL_LINKS[i].tool.padEnd(15)}— ${TOOL_LINKS[i].path}`)
-    }
-  }
+  console.log(bold('  架构：'))
+  console.log(`  · AGENTS.md             ~170行核心规则（始终加载）`)
+  console.log(`  · ${skillDir}/rules/    阶段规则（按需加载）`)
+  console.log(`  · ${skillDir}/templates/ 初始化模板（仅首次使用）`)
   console.log('')
-  console.log(gray('  提示：如需后续添加其他工具同步，重新运行 init --tools=A'))
+  console.log(gray('  AI 每次对话只读取当前阶段的规则，不再一次性加载全部 1500 行'))
   console.log('')
 }
 
@@ -201,29 +216,19 @@ function update() {
   printBanner()
   console.log(bold('  更新 SDD Workflow...\n'))
 
-  if (!fs.existsSync(TEMPLATE)) {
-    console.error('  ❌ 模板文件不存在: ' + TEMPLATE)
-    console.log(gray('     请先升级包: npm install -g @nykj/ny-sdd-workflow@latest'))
-    process.exit(1)
-  }
+  const skillDir = resolveSkillDir()
+  console.log(gray(`  Skill 路径: ${skillDir}`))
 
-  // 备份旧文件
   if (fs.existsSync(AGENTS_FILE)) {
     const backup = AGENTS_FILE + '.bak'
     fs.copyFileSync(AGENTS_FILE, backup)
     console.log(gray(`  📋 已备份: AGENTS.md → AGENTS.md.bak`))
   }
 
-  // 覆盖
-  fs.copyFileSync(TEMPLATE, AGENTS_FILE)
+  const content = renderTemplate(skillDir)
+  fs.writeFileSync(AGENTS_FILE, content, 'utf8')
   console.log(green('  ✅ AGENTS.md 已更新到 v' + VERSION))
 
-  // 更新 workflow 子文件
-  if (copyDirSync(WORKFLOW_SRC, WORKFLOW_DST)) {
-    console.log(green('  ✅ .agents/workflow/ 已同步更新'))
-  }
-
-  // Windows 需要重新复制到各工具
   if (process.platform === 'win32') {
     console.log('')
     console.log(bold('  同步到各工具...\n'))
@@ -234,7 +239,7 @@ function update() {
       }
     }
   } else {
-    console.log(gray('  symlink 自动指向新内容，无需额外操作'))
+    console.log(gray('  symlink 自动指向新内容'))
   }
 
   console.log('')
@@ -244,7 +249,7 @@ function update() {
 // ====== remove 命令 ======
 function remove() {
   printBanner()
-  console.log(bold('  清理 SDD Workflow symlink...\n'))
+  console.log(bold('  清理 SDD Workflow...\n'))
 
   let removed = 0
   for (const { path: targetPath, tool } of TOOL_LINKS) {
@@ -265,9 +270,8 @@ function remove() {
   }
 
   console.log('')
-  console.log(gray('  AGENTS.md 保留（如需删除请手动操作）'))
-  console.log('')
-  console.log(green(bold('  ✅ 清理完成！\n')))
+  console.log(gray('  AGENTS.md 保留'))
+  console.log(green(bold('\n  ✅ 清理完成！\n')))
 }
 
 // ====== status 命令 ======
@@ -275,14 +279,27 @@ function status() {
   printBanner()
   console.log(bold('  SDD Workflow 状态\n'))
 
-  // AGENTS.md
+  const skillDir = resolveSkillDir()
+
   if (fs.existsSync(AGENTS_FILE)) {
     console.log(green('  ✅ AGENTS.md') + gray(' (存在)'))
   } else {
     console.log(yellow('  ❌ AGENTS.md') + gray(' (不存在，请先 init)'))
   }
 
-  // 各工具
+  console.log('')
+  console.log(bold(`  Skill: ${skillDir}\n`))
+  const checkFiles = [
+    'rules/phase-init.md', 'rules/phase-spec.md', 'rules/phase-coding.md',
+    'rules/phase-archive.md', 'rules/quality-standards.md', 'rules/skill-routing.md',
+    'templates/project-profile.tpl.md', 'templates/project-overview.tpl.md',
+  ]
+  for (const f of checkFiles) {
+    const fullPath = path.join(SKILL_PKG_DIR, f)
+    const icon = fs.existsSync(fullPath) ? green('✅') : yellow('❌')
+    console.log(`  ${icon} ${f}`)
+  }
+
   console.log('')
   for (const { path: targetPath, tool } of TOOL_LINKS) {
     if (!fs.existsSync(targetPath)) {
@@ -290,9 +307,9 @@ function status() {
     } else {
       const stat = fs.lstatSync(targetPath)
       if (stat.isSymbolicLink()) {
-        console.log(gray(`  ·  ${tool.padEnd(15)} ${targetPath}`) + green(' (symlink ✅)'))
+        console.log(gray(`  ·  ${tool.padEnd(15)} ${targetPath}`) + green(' ✅'))
       } else {
-        console.log(gray(`  ·  ${tool.padEnd(15)} ${targetPath}`) + yellow(' (文件，非 symlink)'))
+        console.log(gray(`  ·  ${tool.padEnd(15)} ${targetPath}`) + yellow(' (非 symlink)'))
       }
     }
   }
@@ -325,12 +342,14 @@ switch (command) {
     printBanner()
     console.log(bold('  用法：') + 'npx @nykj/ny-sdd-workflow <command>\n')
     console.log(bold('  命令：'))
-    console.log('    init      初始化（复制 AGENTS.md + 创建各工具 symlink）')
+    console.log('    init      初始化（生成 AGENTS.md + 创建各工具 symlink）')
     console.log('    update    更新 AGENTS.md 到最新版本')
     console.log('    status    查看当前安装状态')
     console.log('    remove    清理所有 symlink（保留 AGENTS.md）')
     console.log('')
     console.log(bold('  选项：'))
+    console.log('    --tools=A        全选所有 AI 工具同步')
+    console.log('    --tools=1,2,3    选择指定工具同步')
     console.log('    -v, --version    显示版本号')
     console.log('    -h, --help       显示帮助信息')
     console.log('')
