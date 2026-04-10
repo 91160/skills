@@ -3,7 +3,7 @@
 公司级规范以 Skill 形式封装，AI 在对应阶段必须自动安装并调用。
 
 **Skill 仓库（默认）**：`https://git.nykjsrv.cn/ai-coding/skills.git`
-**Skill 仓库（vant-vue3）**：`https://github.com/teachingai/full-stack-skills`
+**Skill 仓库（frontend-code-standards）**：`https://github.com/teachingai/full-stack-skills`
 **安装命令**：`npx skills add {仓库地址} --skill {skill名称} --yes`
 
 | 阶段           | 触发时机                     | Skill 路由            | skill 名称           | 仓库               |
@@ -13,7 +13,7 @@
 | 前端项目初始化 | §1.1 脚手架创建（仅新项目） | /wap-project-creator  | wap-project-creator    | 默认               |
 | 前端规范提取   | §1 项目初始化               | /front-project-context| front-project-context  | 默认               |
 | 后端规范提取   | §1 项目初始化               | /back-project-context | back-project-context   | 默认               |
-| 前端编码       | §3 Step 4 前端改动          | /frontend-coding      | vant-vue3              | vant-vue3 专用仓库 |
+| 前端编码       | §3 Step 4 前端改动          | /frontend-coding      | frontend-code-standards              | frontend-code-standards 专用仓库 |
 | 后端编码       | §3 Step 4 后端改动          | /java-coding          | java-coding            | 默认               |
 | 代码审计       | §3 Step 5                   | /code-audit           | code-audit             | 默认               |
 | 深度代码扫描   | §1.2 旧项目初始化           | /reverse-scan         | reverse-scan           | 默认               |

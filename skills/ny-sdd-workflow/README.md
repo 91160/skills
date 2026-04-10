@@ -332,7 +332,7 @@ npx @nykj/ny-sdd-workflow update
 | 前端项目初始化 | §1.1（仅新项目） | wap-project-creator | 官方 CLI |
 | 前端规范提取 | §1 项目初始化 | front-project-context | 内置前端扫描 |
 | 后端规范提取 | §1 项目初始化 | back-project-context | 内置后端扫描 |
-| 前端编码 | §3 Step 4 | vant-vue3 | C-01~C-10 |
+| 前端编码 | §3 Step 4 | frontend-code-standards | C-01~C-10 |
 | 后端编码 | §3 Step 4 | java-coding | C-01~C-10 |
 | 代码审计 | §3 Step 5 | code-audit | S-01~S-07 |
 | 深度代码扫描 | §1.2 旧项目初始化 | reverse-scan | 浅层业务架构推断 |
@@ -396,7 +396,7 @@ ny-sdd-workflow        ← 常驻规则（AGENTS.md 174行 + rules/ 按需加载
   ├── wap-project-creator   ← §1.1 按需调用（仅新项目）
   ├── front-project-context ← §1 按需调用（前端规范提取）
   ├── back-project-context  ← §1 按需调用（后端规范提取）
-  ├── vant-vue3        ← §3 Step4 按需调用（前端编码）
+  ├── frontend-code-standards        ← §3 Step4 按需调用（前端编码）
   ├── java-coding      ← §3 Step4 按需调用
   ├── code-audit       ← §3 Step5 按需调用
   └── reverse-scan     ← §1.2 旧项目初始化按需调用（深度代码扫描）
