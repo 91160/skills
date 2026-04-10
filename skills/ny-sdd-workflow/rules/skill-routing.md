@@ -3,20 +3,19 @@
 公司级规范以 Skill 形式封装，AI 在对应阶段必须自动安装并调用。
 
 **Skill 仓库（默认）**：`https://git.nykjsrv.cn/ai-coding/skills.git`
-**Skill 仓库（vant-vue3）**：`https://github.com/teachingai/full-stack-skills`
 **安装命令**：`npx skills add {仓库地址} --skill {skill名称} --yes`
 
-| 阶段           | 触发时机                     | Skill 路由            | skill 名称           | 仓库               |
-| -------------- | ---------------------------- | --------------------- | -------------------- | ------------------ |
-| PRD 审计       | §1.1 / §1.2(feature) / §2.4.5[prd] | /prd-audit            | prd-audit              | 默认               |
-| 后端项目初始化 | §1.1 脚手架创建（仅新项目） | /java-project-creator | java-project-creator   | 默认               |
-| 前端项目初始化 | §1.1 脚手架创建（仅新项目） | /wap-project-creator  | wap-project-creator    | 默认               |
-| 前端规范提取   | §1 项目初始化               | /front-project-context| front-project-context  | 默认               |
-| 后端规范提取   | §1 项目初始化               | /back-project-context | back-project-context   | 默认               |
-| 前端编码       | §3 Step 4 前端改动          | /frontend-coding      | vant-vue3              | vant-vue3 专用仓库 |
-| 后端编码       | §3 Step 4 后端改动          | /java-coding          | java-coding            | 默认               |
-| 代码审计       | §3 Step 5                   | /code-audit           | code-audit             | 默认               |
-| 深度代码扫描   | §1.2 旧项目初始化           | /reverse-scan         | reverse-scan           | 默认               |
+| 阶段           | 触发时机                              | Skill 路由             | skill 名称              | 仓库 |
+| -------------- | ------------------------------------- | ---------------------- | ----------------------- | ---- |
+| PRD 审计       | §1.1 / §1.2(feature) / §2.4.5[prd] | /prd-audit             | prd-audit               | 默认 |
+| 后端项目初始化 | §1.1 脚手架创建（仅新项目）          | /java-project-creator  | java-project-creator    | 默认 |
+| 前端项目初始化 | §1.1 脚手架创建（仅新项目）          | /wap-project-creator   | wap-project-creator     | 默认 |
+| 前端规范提取   | §1 项目初始化                        | /front-project-context | front-project-context   | 默认 |
+| 后端规范提取   | §1 项目初始化                        | /back-project-context  | back-project-context    | 默认 |
+| 前端编码       | §3 Step 4 前端改动                   | /frontend-coding       | frontend-code-standards | 默认 |
+| 后端编码       | §3 Step 4 后端改动                   | /java-coding           | java-coding             | 默认 |
+| 代码审计       | §3 Step 5                            | /code-audit            | code-audit              | 默认 |
+| 深度代码扫描   | §1.2 旧项目初始化                    | /reverse-scan          | reverse-scan            | 默认 |
 
 **Skill 执行流程**（所有触发点必须统一严格遵守，不可跳过）：
 
@@ -60,12 +59,13 @@
 **融合规则**：
 
 - **有 context 文件时**（旧项目）：
+
   1. project-profile.md（铁律）
   2. context 文件（frontend-context.md / backend-context.md）
   3. 内置规约（C-01~C-10 / U-01~U-06 / S-01~S-07）
   4. 冲突项 → 铁律 > context > 内置
-
 - **无 context 文件时**（新项目）：
+
   1. project-profile.md（铁律）
   2. Skill 编码规范（/frontend-coding / /java-coding）
   3. 内置规约（C-01~C-10 / U-01~U-06 / S-01~S-07）
