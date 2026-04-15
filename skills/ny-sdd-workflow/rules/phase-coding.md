@@ -1,30 +1,48 @@
-# 阶段：编码变更通道（§3）
+# §3 编码变更通道
 
-> 本文件在编码开发阶段加载。包含标准通道 Step 0-8 完整步骤。
+> 本文件在编码开发阶段加载。包含标准通道 §3.1~§3.11 完整步骤。
+>
+> 本文件所有 §N.N 章节顶部均带有「流程声明」引用块，AI 进入任何章节前必须先读声明头。
 
 ---
 
-## 通道判断
+## §3.0 通道判断
+
+> **流程声明**
+> - phase: coding
+> - step: 0/11
+> - prev: §2.5 评审 / G0.5 阶段路由（已有 approved spec）
+> - next: §3.1 加载规范 + 铁律（快速/标准通道）/ 直接回答（直通通道）
+> - gate: none
+> - blocking: false
 
 每次开发任务，必须先判断变更类型：
 
 | 通道           | 触发条件                     | 执行路径                                             |
 | -------------- | ---------------------------- | ---------------------------------------------------- |
 | **直通** | 不涉及代码（讨论/解释/运行） | 直接回答，完成后更新 context.md                      |
-| **快速** | 仅样式/文案，不改变逻辑      | Step 0 → 直接改代码 → Step 7 → Step 7.5 → Step 8 |
-| **标准** | 涉及业务逻辑/接口/数据       | 执行 Step 0-8 完整步骤（含 Step 6.5 task.md 联动）   |
+| **快速** | 仅样式/文案，不改变逻辑      | §3.1 → 直接改代码 → §3.9 → §3.10 → §3.11 |
+| **标准** | 涉及业务逻辑/接口/数据       | 执行 §3.1~§3.11 完整步骤（含 §3.8 task.md 联动） |
 
-**通道判断不确定时** → 触发停车信号（说明两种判断及理由，请用户选择）。
+**通道判断不确定时** → 触发 G2 停车信号（说明两种判断及理由，请用户选择）。
 
 ---
 
-## 标准通道执行步骤
+## §3.1 加载规范 + 铁律
 
-**Step 0：加载项目规范 + 检查铁律**
+> **流程声明**
+> - phase: coding
+> - step: 1/11
+> - prev: §3.0 通道判断 / §3.8 更新 task.md（循环编码）
+> - next: §3.2 加载 Spec（标准通道）/ §3.9 生成 Changelog（快速通道，省略 §3.2~§3.8）
+> - gate: none
+> - blocking: false
 
-**一、铁律检查（细查，补充门禁 #6 的粗查）**
+本章节包含 4 个子步骤：§3.1.1 铁律检查 → §3.1.2 已有代码认知加载 → §3.1.3 编码上下文加载 → §3.1.4 UI 上下文加载（前端改动时）。
 
-> 门禁 #6 在任务描述层面粗查铁律冲突；此处加载完编码上下文后，结合具体实现方案逐条细查。
+### §3.1.1 铁律检查（细查，补充 G1 门禁 #6 的粗查）
+
+> G1 门禁 #6 在任务描述层面粗查铁律冲突；此处加载完编码上下文后，结合具体实现方案逐条细查。
 
 读取 `project-profile.md` 的「项目铁律」区块，逐条检查本次变更是否违反。
 
@@ -40,9 +58,9 @@
 请确认如何处理后继续。
 ```
 
-**一半、已有代码认知加载**（`.project/reverse-scan/` 存在时执行，不存在则跳过）：
+### §3.1.2 已有代码认知加载（`.project/reverse-scan/` 存在时执行，不存在则跳过）
 
-从深度扫描产出中加载当前模块相关的编码上下文：
+从深度扫描产出（§1.4 产出）中加载当前模块相关的编码上下文：
 - 读取当前模块涉及的知识卡片（函数级业务语义 + 调用关系 + 数据操作）
 - 读取 `.project/reverse-scan/call-graph.md` 中当前模块的调用链路
 - 读取 `.project/reverse-scan/specs/design/DES-*.md` 中相关模块的技术方案
@@ -53,7 +71,7 @@
   - 已有调用链路：{当前模块的关键调用路径}
 ```
 
-**二、编码上下文加载（遵循但不阻断）**
+### §3.1.3 编码上下文加载（遵循但不阻断）
 
 从 project-profile.md + 前后端 context 文件 + `.outdocs/api-doc.md`，加载本次编码的约束上下文：
 
@@ -61,7 +79,7 @@
 
 | 区块                 | 编码时的约束作用                                 |
 | -------------------- | ------------------------------------------------ |
-| 项目铁律             | 一、铁律检查已处理                               |
+| 项目铁律             | §3.1.1 铁律检查已处理                            |
 | 外部依赖             | 已有的外部 API/服务必须按已有方式调用            |
 | 业务架构（仅旧项目） | 模块间调用必须走已有的依赖路径                   |
 | 业务流程（仅旧项目） | 不得破坏已有流程的正常/异常路径                  |
@@ -83,7 +101,7 @@ context 文件中的以下区块作为编码约束：
 | 内部公共能力 | 已有的工具/组件/中间件/枚举/通用模式必须复用，禁止重复封装 |
 | 禁止事项     | context 文件中列出的禁止行为必须遵守                       |
 
-**三、UI 上下文加载（前端改动时）**
+### §3.1.4 UI 上下文加载（前端改动时）
 
 查 project-profile.md「PRD 内容索引」+ DES 前端部分，加载 UI 编码约束：
 
@@ -107,7 +125,17 @@ context 文件中的以下区块作为编码约束：
   - 样式约束：{遵循的 CSS 变量/主题/间距体系}（前端改动时）
 ```
 
-**Step 1：加载 Spec**
+---
+
+## §3.2 加载 Spec
+
+> **流程声明**
+> - phase: coding
+> - step: 2/11
+> - prev: §3.1 加载规范 + 铁律
+> - next: §3.3 文档学习
+> - gate: none
+> - blocking: false
 
 **feature 类型**：
 ```
@@ -131,20 +159,30 @@ context 文件中的以下区块作为编码约束：
 | ------------ | ---------------------------------------- | ---------------------- |
 | `synced`   | spec 与代码一致                          | 正常执行               |
 | `outdated` | 代码已变更 spec 未同步                   | 先对齐再执行           |
-| `pending`  | 尚未开始（Code Gate 未拦截成功的情况下） | 回退到 §2.1 补写 spec |
+| `pending`  | 尚未开始（G1 门禁未拦截成功的情况下）    | 回退到 §2.2 补写 spec |
 
 **Skill 状态（index.md 两列独立管理）**：
 
 | 列名 | 值 | 含义 | 处理 |
 | --- | --- | --- | --- |
-| coding-skill | `pending` | 未处理 | Step 4 按下方规则判断是否需要调用编码 Skill |
-| coding-skill | `done` | 已处理（Skill 已执行 或 有 context 文件无需 Skill） | Step 4 跳过 Skill，直接编码 |
-| coding-skill | `fallback` | Skill 安装失败，用户确认兜底 | Step 4 使用内置规约 C-01~C-10 |
-| audit-skill | `pending` | 未处理 | Step 5 按下方规则判断是否需要调用审计 Skill |
-| audit-skill | `done` | 审计 Skill 已执行 | Step 5 跳过 Skill |
-| audit-skill | `fallback` | Skill 安装失败，用户确认兜底 | Step 5 使用内置规约 S-01~S-07 |
+| coding-skill | `pending` | 未处理 | §3.5 按下方规则判断是否需要调用编码 Skill |
+| coding-skill | `done` | 已处理（Skill 已执行 或 有 context 文件无需 Skill） | §3.5 跳过 Skill，直接编码 |
+| coding-skill | `fallback` | Skill 安装失败，用户确认兜底 | §3.5 使用内置规约 C-01~C-10 |
+| audit-skill | `pending` | 未处理 | §3.6 按下方规则判断是否需要调用审计 Skill |
+| audit-skill | `done` | 审计 Skill 已执行 | §3.6 跳过 Skill |
+| audit-skill | `fallback` | Skill 安装失败，用户确认兜底 | §3.6 使用内置规约 S-01~S-07 |
 
-**Step 2：文档学习（按需）**
+---
+
+## §3.3 文档学习（按需）
+
+> **流程声明**
+> - phase: coding
+> - step: 3/11
+> - prev: §3.2 加载 Spec
+> - next: §3.4 影响面评估
+> - gate: none
+> - blocking: true
 
 先查 project-profile.md「外部依赖」和对应 context 文件（前端 → frontend-context.md；后端 → backend-context.md）的「构建与运行」「项目架构」「内部公共能力」，已覆盖则跳过。涉及数据库操作时，加载 `.project/reverse-scan/db-schema.md`（存在时）确认相关表结构和字段约束。未覆盖时，优先从 `.docs/` 中查找。`.docs/` 也未覆盖且涉及未记录的 API / 库时触发：
 
@@ -156,7 +194,17 @@ context 文件中的以下区块作为编码约束：
 
 学习后输出摘要，反填 `project-profile.md`「外部依赖」区块。
 
-**Step 3：评估影响面**
+---
+
+## §3.4 影响面评估
+
+> **流程声明**
+> - phase: coding
+> - step: 4/11
+> - prev: §3.3 文档学习
+> - next: §3.5 代码变更
+> - gate: none
+> - blocking: false
 
 - 判断本次改动波及哪些模块
 - 识别潜在风险点
@@ -180,10 +228,20 @@ context 文件中的以下区块作为编码约束：
   - 项目架构：{无 / 影响 XXX 的架构/公共能力}
   - 安全影响：{无 / 涉及 XXX}
   - 性能影响：{无 / 可能影响 XXX}
-  结论：{影响范围可控，继续 / 影响面超出当前通道预期，触发停车信号}
+  结论：{影响范围可控，继续 / 影响面超出当前通道预期，触发 G2 停车信号}
 ```
 
-**Step 4：执行代码变更**
+---
+
+## §3.5 代码变更
+
+> **流程声明**
+> - phase: coding
+> - step: 5/11
+> - prev: §3.4 影响面评估
+> - next: §3.6 代码审计
+> - gate: G1 写码门禁
+> - blocking: true
 
 - **task.md 联动（feature 类型，或 refactor 有 task.md 时）**：编码开始前，将当前子任务 status 更新为 `in-progress`
 - 符合 `.project/specs/` 规范
@@ -192,7 +250,7 @@ context 文件中的以下区块作为编码约束：
   - `coding-skill` 为 `pending` 且对应 context 文件已存在（frontend-context.md / backend-context.md）→ **跳过编码 Skill**，以 context 文件为编码规范，更新 `coding-skill` 为 `done`
   - `coding-skill` 为 `pending` 且 context 文件不存在（新项目脚手架刚建好）→ 读取 {SKILL_DIR}/rules/skill-routing.md，按 Skill 执行流程调用编码 Skill（前端 /frontend-coding，后端 /java-coding），**必须输出 Skill 执行日志**，完成后更新 `coding-skill` 为 `done` 或 `fallback`
   - **Bug / Refactor 无 affected-module 时**：跳过 index.md 状态检查，仅按 context 文件是否存在决定（有 → 以 context 为规范编码；无 → 调用编码 Skill），Skill 执行后不更新 index.md
-- 编码时必须遵循 Step 0 加载的编码上下文（铁律 + context 文件规范 + 内部公共能力 + 架构约束 + 知识卡片中的已有函数），复用已有能力，禁止重复封装
+- 编码时必须遵循 §3.1 加载的编码上下文（铁律 + context 文件规范 + 内部公共能力 + 架构约束 + 知识卡片中的已有函数），复用已有能力，禁止重复封装
 - `.project/reverse-scan/` 存在时：优先从知识卡片中查找可复用的已有函数（精确到 类名.方法名 + 业务语义），而非仅从 context 文件的公共能力列表粗匹配。知识卡片为初始化时的快照，编码过程中不回写更新（如需刷新，用户说"重新扫描"）
 - 编码过程中新增公共工具/组件/枚举 → 追加到对应 context 文件（前端 → frontend-context.md；后端 → backend-context.md）的「内部公共能力」章节
 - **融合优先级**：
@@ -224,7 +282,17 @@ context 文件中的以下区块作为编码约束：
 | U-05 | 状态还原         | 加载中/空状态/错误状态/成功状态必须按 DES 实现 |
 | U-06 | 样式遵循         | 使用项目已有 CSS 变量/主题/公共样式，禁止硬编码颜色/字号 |
 
-**Step 5：代码审计**
+---
+
+## §3.6 代码审计
+
+> **流程声明**
+> - phase: coding
+> - step: 6/11
+> - prev: §3.5 代码变更
+> - next: §3.7 开发自测
+> - gate: none
+> - blocking: false
 
 - 检查 index.md 当前模块的 `audit-skill`：
   - `audit-skill` 为 `done` 或 `fallback` → 已处理，跳过 Skill 流程
@@ -233,7 +301,7 @@ context 文件中的以下区块作为编码约束：
 - **融合优先级**：
   - 有 context 文件时：project-profile.md 铁律 > context 文件 > {SKILL_DIR}/rules/quality-standards.md 代码审计标准
   - 无 context 文件时（新项目）：project-profile.md 铁律 > Skill(/code-audit) 规范 > {SKILL_DIR}/rules/quality-standards.md 代码审计标准
-- 按 S-01~S-07 逐项检查（标准见 {SKILL_DIR}/rules/quality-standards.md），不通过项当场修复，修复后重新检查该项，直到全部通过。单项修复超 3 次仍未通过 → 触发停车信号（列出未通过项，请用户判断）
+- 按 S-01~S-07 逐项检查（标准见 {SKILL_DIR}/rules/quality-standards.md），不通过项当场修复，修复后重新检查该项，直到全部通过。单项修复超 3 次仍未通过 → 触发 G2 停车信号（列出未通过项，请用户判断）
 - 全部通过后输出审计报告，并以模块章节形式追加到 `.outdocs/audit-report.md`：
 
 ```
@@ -258,12 +326,22 @@ context 文件中的以下区块作为编码约束：
 - U-06 样式遵循：✅
 ```
 
-**Step 6：开发自测**
+---
+
+## §3.7 开发自测
+
+> **流程声明**
+> - phase: coding
+> - step: 7/11
+> - prev: §3.6 代码审计
+> - next: §3.8 更新 task.md
+> - gate: none
+> - blocking: false
 
 - 优先读取 .project/specs/rules/unit-test-base.md（团队自定义自测规则）
 - 文件不存在 → 使用 {SKILL_DIR}/rules/quality-standards.md 中开发自测标准（T-01~T-06）
-- 逐项验证，不通过项回 Step 4 修复代码，修复后重新执行 Step 5 + Step 6
-- **自愈循环上限**：Step 4→5→6 的修复循环累计不超过 5 次。超过 5 次 → 触发停车信号（报告错误模式，建议检查 Spec）
+- 逐项验证，不通过项回 §3.5 修复代码，修复后重新执行 §3.6 + §3.7
+- **自愈循环上限**：§3.5→§3.6→§3.7 的修复循环累计不超过 5 次。超过 5 次 → 触发 G2 停车信号（报告错误模式，建议检查 Spec）
 - 全部通过后输出自测报告，并以模块章节形式追加到 `.outdocs/test-report.md`：
 
 ```
@@ -282,15 +360,35 @@ context 文件中的以下区块作为编码约束：
 - T-06 返回值正确性：✅
 ```
 
-**Step 6.5：更新 task.md（feature 类型，或 refactor 有 task.md 时，AI 自动执行）**
+---
+
+## §3.8 更新 task.md（feature 类型，或 refactor 有 task.md 时，AI 自动执行）
+
+> **流程声明**
+> - phase: coding
+> - step: 8/11
+> - prev: §3.7 开发自测
+> - next: §3.9 生成 Changelog（当前模块无 pending）/ §3.1 加载规范 + 铁律（当前模块还有 pending，回到循环；进入 §3.5 时会重新触发 G1 门禁）
+> - gate: none
+> - blocking: false
 
 - 将当前子任务 status 更新为 `done`
 - 更新 task.md 模块总览表的计数
 - 检查当前模块是否还有 pending 子任务：
-  - 有 → 回到门禁自检，自动定位下一个子任务，继续编码循环
-  - 无 → 继续 Step 7，进入归档
+  - 有 → 回到 G1 门禁自检，自动定位下一个子任务，继续编码循环
+  - 无 → 继续 §3.9，进入归档
 
-**Step 7：生成 Changelog**
+---
+
+## §3.9 生成 Changelog
+
+> **流程声明**
+> - phase: coding
+> - step: 9/11
+> - prev: §3.8 更新 task.md（标准通道）/ §3.1 加载规范 + 铁律（快速通道，省略 §3.2~§3.8）
+> - next: §3.10 Spec 状态同步
+> - gate: none
+> - blocking: false
 
 文件路径：`.project/changelog/{YYYY-MM-DD}-{xx}-{简述}.md`
 
@@ -302,7 +400,17 @@ context 文件中的以下区块作为编码约束：
 - **影响代码**: {核心文件}
 ```
 
-**Step 7.5：更新 specs 状态（AI 自动执行）**
+---
+
+## §3.10 Spec 状态同步（AI 自动执行）
+
+> **流程声明**
+> - phase: coding
+> - step: 10/11
+> - prev: §3.9 生成 Changelog
+> - next: §3.11 写入 context.md
+> - gate: none
+> - blocking: false
 
 - 更新 index.md 中对应模块的 sync-status 为 `synced`（feature 类型）
 - 写入 change-log-specs.md 记录本次变更（操作人: AI，触发源: `[specs]`）
@@ -315,13 +423,24 @@ context 文件中的以下区块作为编码约束：
 
 > 快速通道和标准通道共用此步骤。
 
-**Step 8：写入 context.md（AI 自动执行）**
+---
+
+## §3.11 写入 context.md（AI 自动执行）
+
+> **流程声明**
+> - phase: coding
+> - step: 11/11
+> - prev: §3.10 Spec 状态同步
+> - next: §4 归档
+> - gate: none
+> - blocking: false
 
 ```markdown
 ### {YYYY-MM-DD} {任务简述}
 - **完成内容**: {具体到文件级别}
 - **遗留问题**: {如有，否则填"无"}
 - **下一步建议**: {方向}
+- **last**: §3.11 写入 context.md（下次进入 §4 归档）
 ```
 
-完成后 → 进入 {SKILL_DIR}/rules/phase-archive.md 归档检查。
+完成后 → 进入 {SKILL_DIR}/rules/phase-archive.md（§4 归档）。

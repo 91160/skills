@@ -1,8 +1,10 @@
 ---
 name: ny-sdd-workflow
 description: >
-  初始化 SDD Workflow v3.6 开发工作流到项目中。自动解析 skill 安装路径，生成 AGENTS.md（核心规则 + 路径已烧录），
+  初始化 SDD Workflow v3.7 开发工作流到项目中。自动解析 skill 安装路径，生成 AGENTS.md（核心规则 + 路径已烧录），
   阶段规则文件（rules/）保留在 skill 目录按需读取，并可选同步到其他 AI 工具。
+
+  **v3.7 变更**：编号重构（G 系列全局规则 + §1~§4 阶段编号）+ 流程声明头机制，消灭半整数/跳号/错位，提升 AI 可读性。
 
   **必须在以下场景触发：**
   - 用户说"初始化工作流"、"安装 SDD"、"配置开发规范"
@@ -10,23 +12,23 @@ description: >
   - 新项目需要建立 AI 编码工作流规范时
   - 用户说"更新工作流"、"更新 SDD"
 
-  产出：① 项目根目录 AGENTS.md（~174行，{SKILL_DIR} 已替换为实际路径）② 各 AI 工具指令文件 symlink ③ 初始化状态报告
+  产出：① 项目根目录 AGENTS.md（{SKILL_DIR} 已替换为实际路径）② 各 AI 工具指令文件 symlink ③ 初始化状态报告
 ---
 
 # SDD Workflow 初始化 Skill
 
-本 skill 将 SDD Workflow v3.6 安装到当前项目，自动适配多 AI 工具。
+本 skill 将 SDD Workflow v3.7 安装到当前项目，自动适配多 AI 工具。
 
-**v3.6 动态加载架构**：
+**v3.7 动态加载架构**：
 
 ```
-AGENTS.md（~174行，始终加载）
-  └── 门禁 + 停车信号 + 阶段路由表
+AGENTS.md（始终加载）
+  └── G0 对话初始化 + G1 写码门禁 + G2 停车信号 + G3 未覆盖场景兜底 + 阶段路由表
         ↓ AI 根据 context.md 状态按需读取
-{SKILL_DIR}/rules/phase-init.md      项目启动
-{SKILL_DIR}/rules/phase-spec.md      需求/设计/评审
-{SKILL_DIR}/rules/phase-coding.md    编码 Step 0-8
-{SKILL_DIR}/rules/phase-archive.md   归档检查
+{SKILL_DIR}/rules/phase-init.md      §1 项目启动
+{SKILL_DIR}/rules/phase-spec.md      §2 需求/设计/评审
+{SKILL_DIR}/rules/phase-coding.md    §3 编码变更通道（§3.1~§3.11）
+{SKILL_DIR}/rules/phase-archive.md   §4 归档
 {SKILL_DIR}/rules/quality-standards.md  审计标准（审计时读取）
 {SKILL_DIR}/rules/skill-routing.md      Skill 路由（安装/调用时读取）
 
@@ -108,7 +110,7 @@ mkdir -p .continue/rules && [ ! -e .continue/rules/ny-sdd-workflow.md ] && ln -s
 
 > **注意**：其他 AI 工具（Cursor/Copilot 等）只能读取 AGENTS.md 中的核心规则（~170行）。
 > 动态加载阶段文件的能力仅 Claude Code / Codex 支持。
-> 核心规则（门禁 + 停车信号）已足够保障其他工具的基本流程。
+> 核心规则（G1 门禁 + G2 停车信号）已足够保障其他工具的基本流程。
 
 **Step 4：输出 .gitignore 建议**（仅在创建了 symlink 时提示）
 
@@ -123,15 +125,15 @@ mkdir -p .continue/rules && [ ! -e .continue/rules/ny-sdd-workflow.md ] && ln -s
 **Step 5：输出初始化报告**
 
 ```
-【SDD Workflow v3.6 初始化完成】
+【SDD Workflow v3.7 初始化完成】
 
-✅ AGENTS.md（~170行核心规则，始终加载）
-✅ 阶段规则文件位于：{实际 skill 路径}/rules/（按需加载）
+✅ AGENTS.md（核心规则 G0~G3 + 编号流程规约，始终加载）
+✅ 阶段规则文件位于：{实际 skill 路径}/rules/（§1~§4 按需加载）
 {用户选择的工具列表}
 {未选择的工具}
 
 下一步：
-  · AGENTS.md 已生效，AI 将按 SDD Workflow v3.6 执行
+  · AGENTS.md 已生效，AI 将按 SDD Workflow v3.7 执行
   · 阶段规则按需动态加载，无需一次性读取全部内容
   · 如需定制项目铁律，编辑 .project/specs/rules/project-profile.md
 ```
@@ -141,7 +143,7 @@ mkdir -p .continue/rules && [ ! -e .continue/rules/ny-sdd-workflow.md ] && ln -s
 1. 重新确定 skill 路径（同 Step 1）
 2. 备份旧文件：`cp AGENTS.md AGENTS.md.bak`
 3. 读取 `templates/AGENTS.md`，替换 `{SKILL_DIR}`，覆盖写入项目根目录 `AGENTS.md`
-4. 提示：「AGENTS.md 已更新到 v3.6，旧版已备份为 AGENTS.md.bak，symlink 自动同步所有工具」
+4. 提示：「AGENTS.md 已更新到 v3.7，旧版已备份为 AGENTS.md.bak，symlink 自动同步所有工具」
 
 ### C. 查看状态
 
@@ -185,4 +187,4 @@ echo "AGENTS.md 已保留"
 - **不覆盖**：AGENTS.md 已存在时跳过；各工具指令文件已存在且非 symlink 时跳过并提示
 - **Git 提交**：AGENTS.md 需要提交，symlink 文件（.clinerules 等）不提交
 - **不要手动改 rules/**：skill 目录中的 rules/ 和 templates/ 通过 `npx skills add` 更新，手动修改会被覆盖
-- **其他 AI 工具限制**：Cursor/Copilot 等只能读 AGENTS.md 的 174 行核心规则（门禁+停车），无法动态加载阶段文件。完整体验需 Claude Code / Codex
+- **其他 AI 工具限制**：Cursor/Copilot 等只能读 AGENTS.md 的核心规则（G0 对话初始化 + G1 门禁 + G2 停车 + G3 兜底），无法动态加载阶段文件（§1~§4）及其流程声明头。完整体验需 Claude Code / Codex
