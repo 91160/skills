@@ -3,7 +3,7 @@
 const fs = require('fs')
 const path = require('path')
 
-const VERSION = '3.6.0'
+const VERSION = '3.7.0'
 const AGENTS_FILE = path.resolve('AGENTS.md')
 const TEMPLATE = path.join(__dirname, '..', 'templates', 'AGENTS.md')
 const SKILL_PKG_DIR = path.join(__dirname, '..')
