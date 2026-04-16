@@ -24,6 +24,11 @@
 | 10 | context.md 写入（§3.11） | 所有通道 | 执行 §3.11 |
 | 11 | 受影响模块 DES 已同步更新 | Bug / Refactor 类型且 REQ 有 `affected-module` | 对照 DES「受影响 Spec 变更清单」逐项确认已更新到受影响模块 DES |
 | 12 | api-doc.md 已同步更新（级联） | Bug / Refactor 涉及 API 行为变更时 | 确认 api-doc.md 对应章节已反映变更后的 API 定义 |
+| 13 | prototype-spec.md 已同步更新 | feature 视觉内容变更时 / Bug / Refactor 涉及 UI 或视觉内容变更时 | 对照「基准来源」表逐项确认已更新（基准文件/页面结构说明） |
+
+> **prototype-spec.md 归档说明**：
+> - **feature 类型**：prototype-spec.md 是 §2.4 过程性产出，编码正常结束即完成使命，无需独立 sync-status 字段
+> - **Bug / Refactor 类型涉及 UI 变更**：必须同步更新受影响模块的 prototype-spec.md（执行详见 §3.10 Spec 状态同步）
 
 归档后：
 - 标注任务类型标签：`[Feature]` / `[Bug]` / `[Refactor]`
