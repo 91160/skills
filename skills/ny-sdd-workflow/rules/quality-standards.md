@@ -53,7 +53,7 @@ P0 问题必须解决后才继续。
 | S-04 | 性能回归 | 是否引入慢查询/大循环/内存问题 | 在 for 循环中逐条执行 SQL 查询（N+1 问题） | 改为批量查询：`WHERE id IN (...)` |
 | S-05 | 权限校验 | 接口权限是否正确配置 | 新增的管理端接口未添加 `@RequiresPermission` 注解 | 按 DES 权限矩阵添加对应注解 |
 | S-06 | 能力复用 | 是否按 DES「复用能力」清单使用了 context 文件中已有的内部公共能力 | 自行 `import axios from 'axios'` 发请求，但 frontend-context.md 中已有 `@/utils/request.ts` 封装 | 改为 `import { instance } from '@/utils/request'` |
-| S-07 | UI 还原度 | 前端代码的页面结构/组件/交互/字段是否与 PRD 内容 + DES UI 方案一致（U-01~U-06） | PRD 图片中按钮在表单下方居中，代码中按钮放在了右上角 | 调整布局与 PRD 一致，或在 DES 中标注偏离原因后按 DES 执行 |
+| S-07 | UI 还原度 | 前端代码的页面结构/组件/交互/字段是否与**该页面的最高优先级基准**一致（U-01~U-06，基准查询见 §3.1.4 6 级优先级 + prototype-spec.md「基准来源」表） | UI 解析 md 规定 padding: 16px，代码写的是 20px | 按基准修正，或在 DES 中标注偏离原因后按 DES 执行 |
 
 **执行规则**：
 - 逐项检查，不通过项**当场修复**
