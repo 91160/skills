@@ -231,10 +231,9 @@ ny-sdd-workflow/                         ← Skill 安装目录
 
 ```
 G0 对话初始化（AGENTS.md，始终加载）
-  → G0.1 项目类型确认（A 新项目 / B 旧项目需求 / C Bug / D 优化）
-  → G0.2 目录骨架初始化
-  → G0.3 文档补充确认（.docs/prd/ 和 .docs/tech/）
-  → G0.4 状态恢复（读取 context.md / task.md / project-profile.md）
+  → 检查 .project/context.md 是否存在？
+     · 不存在（首次）→ G0.1 项目类型确认（A/B/C/D）→ G0.2 目录骨架 → G0.3 文档补充 → G0.5
+     · 已存在（后续）→ G0.4 状态恢复（读 last 字段）→ G0.4.1 意图推断（非阻塞）→ G0.5
   → G0.5 阶段路由（判断进入 §1 / §2 / §3 / §4）
 
 G1 写码门禁（AGENTS.md，编码前触发）
