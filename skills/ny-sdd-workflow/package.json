@@ -1,7 +1,7 @@
 {
   "name": "@nykj/ny-sdd-workflow",
-  "version": "3.7.0",
-  "description": "SDD Workflow v3.7 — 编号重构（G 系列 + §1~§4）+ 流程声明头 + 动态加载 + 前后端 context 独立，兼容多 AI 工具",
+  "version": "1.0.0",
+  "description": "SDD Workflow v1.0 — G 系列全局规则 + §1~§4 阶段编号 + 流程声明头 + 动态加载架构，兼容多 AI 工具",
   "bin": {
     "ny-sdd-workflow": "bin/cli.js"
   },

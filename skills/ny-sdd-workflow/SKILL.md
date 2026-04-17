@@ -1,10 +1,10 @@
 ---
 name: ny-sdd-workflow
 description: >
-  安装 SDD Workflow v3.7 开发工作流到项目中。自动解析 skill 安装路径，生成 AGENTS.md（核心规则 + 路径已烧录），
+  安装 SDD Workflow v1.0 开发工作流到项目中。自动解析 skill 安装路径，生成 AGENTS.md（核心规则 + 路径已烧录），
   阶段规则文件（rules/）保留在 skill 目录按需读取，并可选同步到其他 AI 工具。
 
-  **v3.7 变更**：编号重构（G 系列全局规则 + §1~§4 阶段编号）+ 流程声明头机制，消灭半整数/跳号/错位，提升 AI 可读性。
+  **v1.0 架构**：G 系列全局规则 + §1~§4 阶段编号 + 流程声明头机制 + 动态加载，兼容多 AI 工具。
 
   **必须在以下场景触发：**
   - 用户说"启动工作流"、"安装 SDD"、"配置开发规范"
@@ -19,9 +19,9 @@ description: >
 
 # SDD Workflow 初始化 Skill
 
-本 skill 将 SDD Workflow v3.7 安装到当前项目，自动适配多 AI 工具。
+本 skill 将 SDD Workflow v1.0 安装到当前项目，自动适配多 AI 工具。
 
-**v3.7 动态加载架构**：
+**v1.0 动态加载架构**：
 
 ```
 AGENTS.md（始终加载）
@@ -127,7 +127,7 @@ mkdir -p .continue/rules && [ ! -e .continue/rules/ny-sdd-workflow.md ] && ln -s
 **Step 5：输出初始化报告**
 
 ```
-【SDD Workflow v3.7 初始化完成】
+【SDD Workflow v1.0 安装完成】
 
 ✅ AGENTS.md（核心规则 G0~G3 + 编号流程规约，始终加载）
 ✅ 阶段规则文件位于：{实际 skill 路径}/rules/（§1~§4 按需加载）
@@ -135,7 +135,7 @@ mkdir -p .continue/rules && [ ! -e .continue/rules/ny-sdd-workflow.md ] && ln -s
 {未选择的工具}
 
 下一步：
-  · AGENTS.md 已生效，AI 将按 SDD Workflow v3.7 执行
+  · AGENTS.md 已生效，AI 将按 SDD Workflow v1.0 执行
   · 阶段规则按需动态加载，无需一次性读取全部内容
   · 如需定制项目铁律，编辑 .project/specs/rules/project-profile.md
 ```
@@ -145,7 +145,7 @@ mkdir -p .continue/rules && [ ! -e .continue/rules/ny-sdd-workflow.md ] && ln -s
 1. 重新确定 skill 路径（同 Step 1）
 2. 备份旧文件：`cp AGENTS.md AGENTS.md.bak`
 3. 读取 `templates/AGENTS.md`，替换 `{SKILL_DIR}`，覆盖写入项目根目录 `AGENTS.md`
-4. 提示：「AGENTS.md 已更新到 v3.7，旧版已备份为 AGENTS.md.bak，symlink 自动同步所有工具」
+4. 提示：「AGENTS.md 已更新到 v1.0，旧版已备份为 AGENTS.md.bak，symlink 自动同步所有工具」
 
 ### C. 查看状态
 
