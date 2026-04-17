@@ -115,7 +115,7 @@ AGENTS.md 模板中用 `{SKILL_DIR}` 占位符引用阶段文件。安装时 cli
 npx skills add https://git.nykjsrv.cn/ai-coding/skills.git --skill ny-sdd-workflow --yes
 ```
 
-安装后在 AI 对话中说 **"初始化工作流"**，AI 会自动：
+安装后在 AI 对话中说 **"启动工作流"** 或 **"安装 SDD"**，AI 会自动：
 1. 将 `AGENTS.md`（G 系列核心规则 + 编号流程规约）写入项目根目录，路径自动解析
 2. 创建各 AI 工具的指令文件 symlink
 3. 输出初始化状态报告
@@ -141,7 +141,7 @@ npx @nykj/ny-sdd-workflow init --tools=N
 
 | 说法 | 触发操作 |
 |------|---------|
-| "初始化工作流" / "安装 SDD" | 初始化（生成 AGENTS.md + symlink） |
+| "启动工作流" / "安装 SDD" | 安装（生成 AGENTS.md + symlink） |
 | "更新工作流" / "更新 SDD" | 更新 AGENTS.md 到最新版本 |
 | "查看工作流状态" | 检查各工具安装情况 |
 | "卸载工作流" | 清理 symlink（保留 AGENTS.md） |
