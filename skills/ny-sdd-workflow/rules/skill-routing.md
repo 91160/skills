@@ -2,7 +2,7 @@
 
 公司级规范以 Skill 形式封装，AI 在对应阶段必须自动安装并调用。
 
-**Skill 仓库（默认）**：`https://git.nykjsrv.cn/ai-coding/skills.git`
+**Skill 仓库（默认）**：`https://github.com/91160/skills`
 **安装命令**：`npx skills add {仓库地址} --skill {skill名称} --yes`
 
 | 阶段           | 触发时机                              | Skill 路由             | skill 名称              | 仓库 |
