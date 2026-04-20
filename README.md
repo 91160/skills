@@ -9,7 +9,7 @@
 ### 方式 1：通过 Skills CLI 安装（推荐）
 
 ```bash
-npx skills add https://github.com/91160/skills.git --skill ny-sdd-workflow --yes
+npx skills add https://github.com/91160/skills --skill ny-sdd-workflow
 ```
 
 ### 方式 2：通过 Git Clone 手动安装
@@ -22,12 +22,6 @@ git clone https://github.com/91160/skills.git
 git clone --filter=blob:none --sparse https://github.com/91160/skills.git
 cd skills
 git sparse-checkout set ny-sdd-workflow
-```
-
-克隆后将 `ny-sdd-workflow/` 目录复制到项目的 `.agents/skills/` 下：
-
-```bash
-cp -r ny-sdd-workflow /path/to/your-project/.agents/skills/
 ```
 
 ### 方式 3：直接下载
