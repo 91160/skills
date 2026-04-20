@@ -1,0 +1,90 @@
+{
+  "skill_name": "java-project-creator",
+  "evals": [
+    {
+      "id": 0,
+      "prompt": "帮我创建一个新的 Java 微服务项目，项目名叫 order-service，是订单服务，GroupId 用 com.example，Java 17，Spring Boot 3.2，技术栈要 Redis、Kafka、OpenFeign + Sentinel、SkyWalking、Knife4j，数据库连接池用 Druid，不需要 XXL-Job 和对象存储",
+      "expected_output": "生成完整项目脚手架（pom.xml + DDD 分层目录结构 + 核心 Java 文件）和 CONVENTIONS.md 规范文档",
+      "assertions": [
+        {
+          "name": "生成了 pom.xml",
+          "check": "输出文件中存在 pom.xml，parent 为 spring-boot-starter-parent，包含 mybatis-plus、redisson、spring-kafka、sentinel 依赖"
+        },
+        {
+          "name": "DDD 分层目录完整",
+          "check": "生成了 controller、application、domain、infrastructure、integration、interfaces、mapper、pojo 目录"
+        },
+        {
+          "name": "核心切面代码生成",
+          "check": "生成了 AccessLogAop.java 和 GlobalExceptionHandler.java"
+        },
+        {
+          "name": "统一响应体生成",
+          "check": "生成了 Result.java 和 ResultCode.java"
+        },
+        {
+          "name": "规范文档生成",
+          "check": "生成了 CONVENTIONS.md，包含阿里巴巴命名规范和分层架构说明"
+        },
+        {
+          "name": "配置文件三套环境",
+          "check": "生成了 application.yml、application-dev.yml、application-test.yml、application-prod.yml"
+        }
+      ]
+    },
+    {
+      "id": 1,
+      "prompt": "我要起一个新的 Spring Boot 服务，叫 notification，通知服务，groupId 是 com.mycompany.platform，Java 17，Spring Boot 3.2，只需要最基础的：OpenFeign 调用、MySQL、无 MQ 无缓存无配置中心，API 文档用 SpringDoc OpenAPI",
+      "expected_output": "生成轻量级项目脚手架（无 Kafka/Redis 依赖）和规范文档，结构完整但依赖精简",
+      "assertions": [
+        {
+          "name": "父 POM 正确",
+          "check": "pom.xml 中 parent 使用 spring-boot-starter-parent"
+        },
+        {
+          "name": "groupId 正确",
+          "check": "包路径和 package 声明使用 com.mycompany.platform.notification"
+        },
+        {
+          "name": "无 Redis/Kafka 依赖",
+          "check": "pom.xml 中不包含 redisson 和 spring-kafka"
+        },
+        {
+          "name": "SpringDoc OpenAPI",
+          "check": "pom.xml 中包含 springdoc-openapi-starter-webmvc-ui"
+        },
+        {
+          "name": "分层结构仍然完整",
+          "check": "即使技术栈精简，DDD 分层目录结构依然完整生成"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "搭建项目脚手架：artifact 叫 health-report，健康报告服务，com.example.health，Java 17，Spring Boot 3.2，需要完整技术栈：Nacos、Redis、Kafka、XXL-Job、OpenFeign+Sentinel、阿里OSS、SkyWalking、Knife4j",
+      "expected_output": "生成重量级完整技术栈项目，Nacos + Kafka + XXL-Job + OSS 等均正确引入",
+      "assertions": [
+        {
+          "name": "XXL-Job 配置生成",
+          "check": "生成了 XxlJobConfig.java，包含从配置文件读取 adminAddresses 的逻辑"
+        },
+        {
+          "name": "Kafka 配置",
+          "check": "生成了 KafkaConfig.java"
+        },
+        {
+          "name": "阿里 OSS 依赖",
+          "check": "pom.xml 中包含 aliyun-sdk-oss"
+        },
+        {
+          "name": "SkyWalking traceId 透传",
+          "check": "ThreadPoolConfig 中 TaskDecorator 透传链路追踪 ID"
+        },
+        {
+          "name": "Nacos 配置",
+          "check": "pom.xml 中包含 spring-cloud-starter-alibaba-nacos-config 和 nacos-discovery"
+        }
+      ]
+    }
+  ]
+}
