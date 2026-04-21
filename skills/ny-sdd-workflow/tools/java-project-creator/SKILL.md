@@ -87,8 +87,10 @@ description: >
 │   └── pojo/                                ← 数据对象（统一存放）
 │       ├── bo/        BO      - 业务对象，应用层内流转
 │       ├── vo/        VO      - HTTP 入参视图对象
+│       ├── rvo/       RVO     - HTTP 出参响应对象
 │       ├── dto/       DTO     - 跨层/跨服务数据传输对象
-│       ├── entity/    Entity  - 数据库映射实体（DO）
+│       ├── dbo/       DBO     - 数据库映射实体（DO）
+│       ├── dao/       DAO     - 查询结果对象
 │       ├── query/     Query   - 读操作查询对象
 │       ├── command/   Command - 写操作命令对象
 │       └── message/   Message - MQ 消息体
@@ -100,7 +102,8 @@ description: >
 │   ├── logback-spring.xml       ← 日志配置
 │   └── mapper/                  ← MyBatis XML（复杂 SQL）
 ├── src/test/java/               ← 单元测试
-└── pom.xml
+├── pom.xml
+└── assembly.xml                 ← 打包描述符（外置配置）
 ```
 
 ### 命名规范（遵循阿里巴巴 Java 开发手册）
@@ -114,9 +117,11 @@ description: >
 | ApplicationService | 写操作：`XxxApplicationService` / 读操作：`XxxQueryService` | `OrderApplicationService` |
 | Repository | 领域仓储接口：`XxxRepository` | `OrderRepository` |
 | Mapper | 数据访问接口：`XxxMapper` | `OrderMapper` |
-| Entity（DO） | 数据库实体：`XxxEntity` | `OrderEntity` |
+| DBO（DO） | 数据库映射实体：`XxxDBO` | `OrderDBO` |
+| DAO | 查询结果对象：`XxxDAO` | `OrderStatDAO` |
 | DTO | 数据传输：`XxxDTO` | `OrderDTO` |
-| VO | 视图对象：`XxxVO` | `OrderVO` |
+| VO | HTTP 入参视图对象：`XxxVO` | `OrderVO` |
+| RVO | HTTP 出参响应对象：`XxxRVO` | `OrderDetailRVO` |
 | Query | 查询对象：`XxxQuery` | `OrderQuery` |
 | Command | 写命令对象：`XxxCommand` | `CreateOrderCommand` |
 | Feign Client | `XxxClient`（位于 integration/client） | `UserClient` |
@@ -129,6 +134,7 @@ description: >
 | 切面 | Order | 作用 |
 |------|-------|------|
 | AccessLogAop | -10 | 记录 Controller 层请求日志（URL/耗时/入出参） |
+| AuthAccessAop | -3 | 鉴权校验（可选，按业务需要添加） |
 | IdempotentAop | 默认 | 基于 Redis 的接口幂等（可选，需 Redis） |
 
 ### 统一响应格式
@@ -153,6 +159,17 @@ Result<T> { code, data, message, timestamp }
 - 禁止使用 `System.out.println`
 - 日志格式：`%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n`
 - 链路追踪 ID（如有 SkyWalking/Micrometer）自动注入
+
+### 打包规范
+
+配置文件（yml/logback-spring.xml）从 jar 包中 exclude，运行时从外部 `conf/` 目录加载：
+
+```
+deploy/
+  lib/   ← jar + 所有依赖
+  conf/  ← application-*.yml、logback-spring.xml
+  bin/   ← 启动脚本
+```
 
 ---
 
@@ -197,6 +214,10 @@ commons-lang3
 
 **build 插件**：
 - maven-compiler-plugin（annotationProcessorPaths 包含 mapstruct + lombok）
+- maven-jar-plugin（exclude *.yml、logback-spring.xml，输出到 `dest/lib`）
+- maven-dependency-plugin（copy-dependencies 到 `dest/lib`）
+- maven-resources-plugin（yml/logback-spring.xml 复制到 `dest/conf`）
+- maven-assembly-plugin（使用 assembly.xml）
 - spring-boot-maven-plugin
 
 ### 3.2 技术栈依赖 Block
@@ -381,6 +402,15 @@ RuntimeException 子类，持有 ResultCode 和 message。
 - @Order(-10)
 - 记录 URL、HTTP Method、耗时、入参、出参（JSON 序列化，超长截断）
 
+#### `infrastructure/annotation/AuthAccess.java`（可选，按业务需要生成）
+注解：`@Target(METHOD)` + `@Retention(RUNTIME)`，标注需要鉴权的接口方法。
+
+#### `infrastructure/aop/AuthAccessAop.java`（可选，按业务需要生成）
+- @Around `@annotation(AuthAccess)`
+- @Order(-3)
+- 从请求头提取 token，校验用户身份和权限
+- 校验失败抛 BizException(UNAUTHORIZED / FORBIDDEN)
+
 #### `infrastructure/annotation/Idempotent.java`（如选了 Redis）
 注解：`@Target(METHOD)` + `@Retention(RUNTIME)` + `long timeout() default 3`
 
@@ -396,7 +426,7 @@ RuntimeException 子类，持有 ResultCode 和 message。
 生成 asyncExecutor、businessExecutor。如有链路追踪则通过 TaskDecorator 透传 traceId。
 
 #### `infrastructure/config/KafkaConfig.java`（如选 Kafka）
-生成 KafkaTemplate + 示例 ConsumerFactory 配置。
+生成主 `KafkaTemplate` + 至少一个示例 `ConcurrentKafkaListenerContainerFactory`，展示多集群模式（不同 bootstrap-servers 对应不同 ContainerFactory）。
 
 #### `infrastructure/config/XxlJobConfig.java`（如选 XXL-Job）
 标准 XxlJobSpringExecutor 配置，从配置文件读取参数。
@@ -418,7 +448,7 @@ public class DemoController {
 
     @GetMapping("/{id}")
     @Operation(summary = "查询示例")
-    public Result<DemoVO> get(@PathVariable Long id) {
+    public Result<DemoRVO> get(@PathVariable Long id) {
         return Result.ok(demoApplicationService.get(id));
     }
 }
@@ -434,8 +464,8 @@ public class DemoController {
 接口形式，含 save/findById 方法示例。
 
 #### 示例 POJO
-`pojo/command/CreateDemoCommand.java` + `pojo/query/DemoQuery.java` + `pojo/vo/DemoVO.java` + `pojo/entity/DemoEntity.java`
-基础 POJO 示例，带 @Valid 校验注解（@NotBlank / @NotNull / @Size 等）。
+`pojo/command/CreateDemoCommand.java` + `pojo/query/DemoQuery.java` + `pojo/vo/DemoVO.java` + `pojo/rvo/DemoRVO.java` + `pojo/dbo/DemoDBO.java`
+基础 POJO 示例，带 @Valid 校验注解（@NotBlank / @NotNull / @Size 等）。DBO 带 @TableName 注解映射数据库表。
 
 ### 3.4 生成配置文件
 
@@ -494,7 +524,30 @@ springdoc:
 ```
 如有 SkyWalking 则使用 `apm-toolkit-logback-1.x` 的 `%tid` 占位符注入 traceId。
 
-### 3.5 生成 .gitignore
+### 3.5 生成 assembly.xml
+
+标准打包描述符，将 `dest/` 目录下的 lib/conf/bin 打成 tar.gz：
+
+```xml
+<assembly>
+    <id>deploy</id>
+    <formats>
+        <format>tar.gz</format>
+    </formats>
+    <fileSets>
+        <fileSet>
+            <directory>dest/lib</directory>
+            <outputDirectory>lib</outputDirectory>
+        </fileSet>
+        <fileSet>
+            <directory>dest/conf</directory>
+            <outputDirectory>conf</outputDirectory>
+        </fileSet>
+    </fileSets>
+</assembly>
+```
+
+### 3.6 生成 .gitignore
 
 ```gitignore
 target/
