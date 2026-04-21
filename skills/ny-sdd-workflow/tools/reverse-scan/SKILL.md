@@ -41,6 +41,15 @@ description: >
 
 模板文件位于 `rules/card-template.md`，在生成知识卡片、模块地图、DES、REQ 时读取对应模板。
 
+## 执行模式
+
+本 Skill 支持两种模式（详见 `rules/scan-workflow.md` §0）：
+
+- **`auto`（默认）**：全自动执行。H-01~H-04 类软暂停由 AI 按置信度自决并记入 grey-decisions.md，Phase 6 末尾一次性集中复核。仅 H-05（需人工补充信息）/ H-06（验证不通过）/ H-07（审计循环超限）三类硬暂停会中断流程。
+- **`interactive`**：每个 Phase 末尾对累积的软暂停项批量暂停确认。
+
+**调用规则：** 未指定时默认 `auto`；用户明确说"交互扫描 / 每步确认"才切 `interactive`。**Phase、审计、模块、Step 之间一律不得输出"是否继续"类提问。**
+
 ## 产出物清单
 
 执行完毕后，`.project/reverse-scan/` 目录下必须存在以下文件：
