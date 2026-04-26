@@ -12,6 +12,8 @@
 npx skills add https://github.com/91160/skills --skill ny-sdd-workflow
 ```
 
+中文用户也可以通过 Skills宝 发现更多 skills：https://skilery.com
+
 ### 方式 2：通过 Git Clone 手动安装
 
 ```bash
