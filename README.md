@@ -1,6 +1,6 @@
 # NY-SDD-Workflow
 
-**SDD Workflow v1.0** — AI 编码工作流规则，G 系列全局规则 + §1~§4 阶段编号 + 流程声明头 + 动态加载架构，兼容多 AI 编码工具。
+**SDD Workflow ** — 一套完整的AI 编码工作流规范工具。此框架支持全新项目、旧项目+新需求、bug修复、技术优化场景的AI-Coding，提供高质量、高效率的流程和完整的执行步骤。支持多 AI 编码工具（claude/codex/cursor等）。
 
 一条命令安装，统一团队 AI 编码规范。
 
