@@ -422,6 +422,8 @@ DES 完成后，从 DES 的 API 定义部分自动提取，以模块章节形式
 
 **调用 test-case-design Skill**：读取 {SKILL_DIR}/rules/skill-routing.md，按 Skill 执行流程安装并调用。
 
+> 用户也可显式运行 `/sdd-test-case` 触发本步。
+
 **输入**：当前模块的 REQ（approved）+ DES（approved）+ PRD 内容（通过 PRD 内容索引定位）
 
 **SDD 模式参数**：
@@ -474,6 +476,8 @@ DES 完成后，从 DES 的 API 定义部分自动提取，以模块章节形式
 > 4. Spec Sync 本次执行的 `last: §2.6` 记录保留在 context.md 末尾作为留痕，不作为下次状态恢复的起点
 
 用户可随时触发 specs 同步。AI 识别触发源后走统一流程。
+
+> 用户也可显式运行 `/sdd-prd-change` 触发本步（专对 PRD 变更，触发源标签 `[prd]`）。其他触发源（specs / tech）目前仅自然语言入口。
 
 **触发识别**：
 
