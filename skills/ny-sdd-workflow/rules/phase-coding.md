@@ -34,6 +34,8 @@
 
 当 G0.4.1 判定为「当前需求 bug」时，直接进入本节 §3.0，按上方通道判断表选择通道。**通道选择规则与正常开发完全一致**（样式/文案 bug → 快速；逻辑/接口/数据 bug → 标准；只是询问报错原因 → 直通），后续 §3.1~§3.11 正常执行。
 
+> 用户也可显式运行 `/sdd-bug-fix` 触发本回环；命令内置二次判定（含 G2 停车三选一），与本节 G0.4.1 → §3.0 路径完全等价。
+
 **与正常开发的差异仅在文档留痕**（§3.10 执行时生效）：
 
 - **不新建 REQ/DES**：当前需求已有 approved 的 REQ/DES，bug 修复复用现有文档
@@ -315,6 +317,7 @@ bug/refactor 不走 §2.4，当前模块可能无 prototype-spec.md。涉及 UI 
   - `coding-skill` 为 `done` 或 `fallback` → 已处理，跳过
   - `coding-skill` 为 `pending` 且对应 context 文件已存在（frontend-context.md / backend-context.md）→ **跳过编码 Skill**，以 context 文件为编码规范，更新 `coding-skill` 为 `done`
   - `coding-skill` 为 `pending` 且 context 文件不存在（新项目脚手架刚建好）→ 读取 {SKILL_DIR}/rules/skill-routing.md，按 Skill 执行流程调用编码 Skill（前端 /frontend-coding；后端无内置编码 Skill，直接使用 C-01~C-10 内置规约），**必须输出 Skill 执行日志**，完成后更新 `coding-skill` 为 `done` 或 `fallback`
+    > 用户也可显式运行 `/sdd-frontend-standards` 触发前端编码规范检查；后端无对应 slash 命令，使用内置规约。
   - **Bug / Refactor 无 affected-module 时**：跳过 index.md 状态检查，仅按 context 文件是否存在决定（有 → 以 context 为规范编码；无 → 前端调用 /frontend-coding，后端使用 C-01~C-10），Skill 执行后不更新 index.md
 - 编码时必须遵循 §3.1 加载的编码上下文（铁律 + context 文件规范 + 内部公共能力 + 架构约束 + 知识卡片中的已有函数），复用已有能力，禁止重复封装
 - `.project/reverse-scan/` 存在时：优先从知识卡片中查找可复用的已有函数（精确到 类名.方法名 + 业务语义），而非仅从 context 文件的公共能力列表粗匹配。知识卡片为初始化时的快照，编码过程中不回写更新（如需刷新，用户说"重新扫描"）
@@ -427,6 +430,8 @@ bug/refactor 不走 §2.4，当前模块可能无 prototype-spec.md。涉及 UI 
 ```
 
 读取 {SKILL_DIR}/rules/skill-routing.md，按 Skill 执行流程安装并调用 /unit-test-generator。
+
+> 用户也可显式运行 `/sdd-unit-test` 触发本步（含前置清理 generated/ 残留 + SDD 模式参数自动注入）。
 
 **工作模式**：自主设计模式（从 REQ/DES + 实际源代码 → 设计单测用例 + 生成代码 + 执行 + 报告）
 

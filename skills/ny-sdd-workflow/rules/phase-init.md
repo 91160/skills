@@ -25,6 +25,7 @@ AI 检查 .docs/prd/ 是否有文件：
     1. 读取 {SKILL_DIR}/rules/skill-routing.md，按 Skill 执行流程调用 /prd-audit Skill，输出执行日志
     2. Skill 文件缺失（SKILL.md 不存在）→ 使用 {SKILL_DIR}/rules/quality-standards.md 中 PRD 审计标准兜底
     3. P0 必须解决后才继续
+    > 用户也可显式运行 `/sdd-prd-audit` 触发本步；自然语言「审计 PRD」与 slash 命令等价。
   → AI 从 PRD 提取业务流程，首次生成 .outdocs/project-overview.md，写入「二、业务架构」「三、核心业务流程」部分（新项目不写入 project-profile.md，待需求澄清完善后再沉淀；其余章节留空，由 §2.1 补充）
   → AI 扫描 .docs/ 目录，按下方「技术文档处理规则」处理：
     - .docs/prd/ 有文件 → 已在上方读取，此处跳过
@@ -39,6 +40,7 @@ AI 检查 .docs/prd/ 是否有文件：
     2. 后端 Java → 按 Skill 执行流程调用 java-project-creator，输出执行日志
     3. 前端 → 按 Skill 执行流程调用 wap-project-creator，输出执行日志
     4. Skill 文件缺失 → 使用框架官方 CLI 兜底（如 `npm create vue@latest` / `npx create-spring-boot`）
+    > 用户也可显式运行 `/sdd-java-create` / `/sdd-wap-create` 触发本步。
   → 安装依赖，确认能跑起来
   → 执行 §1.3 前后端规范提取
   → 读取 `{SKILL_DIR}/rules/phase-spec.md`，进入 §2.1 任务拆分（全量模块排序 + 全量模块子任务拆分）
@@ -133,6 +135,7 @@ AI 生成 .project/ 目录（汇总所有信息）
       1. 读取 {SKILL_DIR}/rules/skill-routing.md，按 Skill 执行流程调用 /prd-audit Skill，输出执行日志
       2. Skill 不可用 → 按 {SKILL_DIR}/rules/quality-standards.md 中 PRD 审计标准兜底
       3. P0 问题必须解决后才继续
+      > 用户也可显式运行 `/sdd-prd-audit` 触发本步；自然语言「审计 PRD」与 slash 命令等价。
     → 读取 `{SKILL_DIR}/rules/phase-spec.md`，进入 §2.1 任务拆分（全量模块排序 + 拆分，与新项目一致）
   → bug / refactor 类型 → 跳过 §2.1，直接读取 `{SKILL_DIR}/rules/phase-spec.md`，进入 §2.2
   → 进入图二业务开发循环
@@ -169,6 +172,8 @@ AI 生成 .project/ 目录（汇总所有信息）
 4. 必须输出 Skill 执行日志
 ```
 
+> 用户也可显式运行 `/sdd-front-context` 触发本步。
+
 **后端**（技术栈含后端时执行）：
 
 ```
@@ -178,6 +183,8 @@ AI 生成 .project/ 目录（汇总所有信息）
 3. Skill 文件缺失 → 使用内置兜底：读取 {SKILL_DIR}/rules/fallback/backend-scan.md，按其指令扫描，产出直接写入 .project/specs/rules/backend-context.md
 4. 必须输出 Skill 执行日志
 ```
+
+> 用户也可显式运行 `/sdd-back-context` 触发本步。
 
 **纯前端项目**：不生成 backend-context.md。
 **纯后端项目**：不生成 frontend-context.md。
@@ -213,6 +220,8 @@ AI 生成 .project/ 目录（汇总所有信息）
 3. Skill 文件缺失 → 使用内置兜底：执行上方「兜底：业务架构与流程提取」（现有浅层扫描逻辑）
 4. 必须输出 Skill 执行日志
 ```
+
+> 用户也可显式运行 `/sdd-reverse-scan` 触发本步；自然语言「深度扫描」/「逆向扫描」与 slash 命令等价。
 
 **深度扫描产出物**（产出在 `.project/reverse-scan/`，与正向 Spec 体系路径隔离）：
 
