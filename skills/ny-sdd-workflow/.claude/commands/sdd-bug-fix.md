@@ -82,8 +82,11 @@ description: 当前开发过程中产生的 Bug 修复（触发 G0.4.1 二次判
 
 ### §3.1~§3.8（与正常开发完全一致）
 - §3.1 加载规范+铁律、§3.2 加载 spec、§3.3 文档学习、§3.4 影响面评估
-- §3.5 代码变更、§3.6 代码审计（S-01~S-08）、§3.7 开发自测
-- §3.8 task.md 联动（bug 修复回环不计入 task.md 子任务，跳过）
+- §3.5 代码变更、§3.6 代码审计（**blocking: audit-required**，进入时必须先输出审计起手清单：≥3 个怀疑点 + 验证 + ≥3 finding 或辩护；S-01~S-08）
+- §3.7 开发自测（**blocking: gated**，进入时必须先回灌 §3.6 审计锚点 + 哈希校验；细则见 phase-coding.md）
+- §3.8 task.md 联动（**blocking: gated**，进入时必须先回灌 §3.7 自测锚点；但 bug 修复回环不计入 task.md 子任务，跳过更新 task.md 动作）
+
+> bug 修复回环也走完整的防偷懒约束（gated 回灌 + audit-required 起手清单 + produced 哈希）。bug 修复同样需要审计 + 测试。
 
 ### §3.9 生成 Changelog
 - `.project/changelog/{YYYY-MM-DD}-{xx}-{简述}.md`，标签 `[Bug]`

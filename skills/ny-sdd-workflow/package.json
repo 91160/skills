@@ -1,7 +1,7 @@
 {
-  "name": "ny-sdd-workflow",
-  "version": "1.0.2",
-  "description": "SDD Workflow v1.0.2 — G 系列全局规则 + §1~§4 阶段编号 + 流程声明头 + 动态加载架构 + 13 个 Slash Commands，兼容多 AI 工具",
+  "name": "@nykj/ny-sdd-workflow",
+  "version": "1.0.3",
+  "description": "SDD Workflow v1.0.3 — G 系列全局规则 + §1~§4 阶段编号 + 流程声明头机制（含四值 blocking 防偷懒）+ 动态加载架构 + 执行自审统一机制 + 13 个 Slash Commands，兼容多 AI 工具",
   "bin": {
     "ny-sdd-workflow": "bin/cli.js"
   },
@@ -23,8 +23,8 @@
     "cline",
     "windsurf"
   ],
-  "author": "91160",
-  "license": "MIT",
+  "author": "nykj",
+  "license": "UNLICENSED",
   "engines": {
     "node": ">=16.0.0"
   }

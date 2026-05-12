@@ -1,21 +1,21 @@
 ---
 inclusion: always
-description: "SDD 开发工作流 v1.0.2 — G 系列全局规则始终加载，§1~§4 阶段规则按需读取，流程声明头机械跳转，13 个 Slash Commands 显式入口"
+description: "SDD 开发工作流 v1.0.3 — G 系列全局规则始终加载，§1~§4 阶段规则按需读取，流程声明头机械跳转 + 四值 blocking 防偷懒（gated 回灌 / audit-required 审计起手清单 / 执行自审 / produced 哈希校验），13 个 Slash Commands 显式入口"
 ---
-# SDD Workflow — AI 执行规则 v1.0.2
+# SDD Workflow — AI 执行规则 v1.0.3
 
 > **最高指令**：严禁在未确认变更通道的情况下直接编写或修改生产代码。每次回复优先使用中文。
 >
 > **防误触**（本文件被加载意味着 AGENTS.md 已存在）：
 > - 用户说"安装 SDD"、"安装工作流"、"安装 AGENTS"或运行 `/sdd-init` → 走 SKILL.md 基础设施安装流程（更新/状态/卸载等场景）。
 > - 用户说"启动工作流"、"开始开发"或运行 `/sdd-start` → 走本文件 G0 对话初始化流程（首次/后续路径）。
-> - **禁止执行 Claude Code 内置的 `/init` 命令**（/init 是生成 CLAUDE.md 的命令，与本工作流无关）。
+> - **禁止执行 Claude Code 内置的 `/init` 命令**（/init 会覆盖本工作流生成的 CLAUDE.md symlink，导致 AGENTS.md 核心规则丢失）。
 >
 > （AGENTS.md 不存在的场景由 SKILL.md 顶部触发条件接管，本文件不消费）
 
 ---
 
-## 编号与流程声明规约（v1.0.2）
+## 编号与流程声明规约
 
 本工作流使用两套编号体系，AI 读取时必须严格区分：
 
@@ -46,9 +46,62 @@ description: "SDD 开发工作流 v1.0.2 — G 系列全局规则始终加载，
 2. **进入任何 §N.N 章节前，必须先读取该章节顶部的流程声明引用块**（按 `prev` / `next` / `gate` 字段执行跳转与门禁检查），**并在执行该章节正文动作前输出该声明头作为可见凭证**（详见下方 G0.5 阶段执行约束）
 3. 正文与声明头冲突时，以正文为准；同时修复声明头
 4. G 系列章节（G0~G3）常驻 AGENTS.md，不使用声明头；阶段章节（§1~§4）必须带声明头
-5. 字段取值规范：`phase ∈ {init, spec, coding, archive}`；空值统一用 `none`；next 多分支用 `/` 分隔，条件写括号内
-6. 其他 AI 工具（Cursor/Copilot 等）只读 AGENTS.md，不消费流程声明；动态加载 + 声明头机制仅 Claude Code / Codex 启用
-7. **context.md 状态标记规约**：AI 在关键节点追加 `.project/context.md` 记录时，**每条记录必须在末尾标注 `last: §N.N {章节名}`**（或 `last: G0.N` 如果处于全局初始化阶段），用于下次对话 G0.4 状态恢复时精确定位当前所处章节。关键节点包括：§2.1 任务拆分完成 / §2.2 REQ 完成 / §2.3 DES 完成 / §2.4 原型规格完成 / §2.5 评审通过 / §2.6 Spec Sync 完成 / §2.7 功能测试用例设计完成 / §3.0 直通通道完成 / §3.11 写入 context.md / §4 归档完成。G0.4 状态恢复时，AI 读取 context.md **最后一条记录的 `last` 字段**即可反查阶段文件，无需推理
+5. 字段取值规范：
+   - `phase ∈ {init, spec, coding, archive}`；空值统一用 `none`
+   - `next` 多分支用 `/` 分隔，条件写括号内
+   - `gate ∈ {G1 写码门禁, none}`
+   - **`blocking ∈ {true, false, gated, audit-required}`**（四值语义详见下方 G0.5 阶段执行约束）：
+     - `true` — 必须执行（按条件触发时），跳过 = 流程错误，触发 G2 停车
+     - `false` — 可选 / 无前置依赖
+     - `gated` — blocking=true 的特化：进入前必须输出「上节产物回灌 + 本节输入承诺」两段；缺回灌 = 视为未进入，执行自审会回滚到上节重做
+     - `audit-required` — blocking=true 的特化：进入前必须输出「审计起手清单（≥3 怀疑点 + 验证 + 最低 finding 数）」；不满足 = 视为敷衍，执行自审回滚到本节重做
+6. 其他 AI 工具（Cursor/Copilot 等）只读 AGENTS.md，不消费流程声明；动态加载 + 声明头机制 + 四值 blocking 仅 Claude Code / Codex 启用
+7. **context.md 状态标记规约**：AI 在关键节点追加 `.project/context.md` 记录时，**每条记录必须在末尾标注 `last: §N.N {章节名}`**（或 `last: G0.N` 如果处于全局初始化阶段），用于下次对话 G0.4 状态恢复时精确定位当前所处章节。关键节点包括：§2.1 任务拆分完成 / §2.2 REQ 完成 / §2.3 DES 完成 / §2.4 原型规格完成 / §2.5 评审通过 / §2.6 Spec Sync 完成 / §2.7 功能测试用例设计完成 / §3.0 直通通道完成 / §3.6 审计完成 / §3.7 自测完成 / §3.11 写入 context.md / §4 归档完成。G0.4 状态恢复时，AI 读取 context.md **最后一条记录的 `last` 字段**即可反查阶段文件，无需推理
+8. **produced 字段规约**：context.md 记录的格式与解析规约：
+
+   **格式（行关系）**：
+   - 一条 context.md 记录 = 1~2 行**连续无空行**的文本
+   - **第 1 行**末尾必须含 `last: §X.Y {章节名}` 或 `last: G0.N`
+   - **第 2 行**（条件性）以 `produced: ` 开头，**紧跟第 1 行**，中间无空行；该 produced 行属于上一条 last 记录
+   - 跨记录之间用 1 个空行隔开
+   
+   **强制范围**：produced 字段**仅以下 3 个章节强制**写入：
+   | 章节 | blocking | 产物 |
+   |---|---|---|
+   | §2.4 原型生成 | true | `.project/specs/master/prototypes/{模块编号}-{模块名}/prototype-spec.md` |
+   | §3.6 代码审计 | audit-required | `.outdocs/audit-report.md#{锚点-slug}` |
+   | §3.7 开发自测 | gated | `.outdocs/unit-test-report.md#{锚点-slug}` |
+   
+   其他章节（§1.1 / §1.2 / §2.1 / §2.2 / §2.3 / §2.7 / §3.3 / §3.4 / §3.5 / §3.11 / §4 等）**blocking=true 但豁免 produced**——其产物语义不是单一可锚定的文件（如 §3.5 是 git diff、§2.1 是 task.md + index.md 双产物）；这些章节的完整性靠各自的章节正文规约 + G1 写码门禁 + §4 归档检查兜底。
+   
+   **格式（共用）**：
+   ```
+   produced: <产物路径>[#锚点-slug] <SHA-256 前 8 位>[, <产物路径2> <SHA-256-2>, ...]
+   ```
+   - **SHA-256 计算粒度**：
+     - **单文件无锚点产物**（如 §2.4 prototype-spec.md 整个文件即一个产物）→ `shasum -a 256 <文件路径> | cut -c1-8` 针对整个文件
+     - **多模块共享文件 + 锚点定位产物**（如 §3.6 / §3.7 的 `.outdocs/audit-report.md` / `unit-test-report.md`，多模块章节追加在同一文件）→ **针对锚点段内容计算哈希**，避免后续模块追加导致前模块哈希过时：
+       ```bash
+       # 提取锚点段（从锚点行到下一个 ^## 之前，或文件末尾）
+       awk -v anchor='## {锚点完整文本}' '
+         $0 ~ anchor {found=1}
+         found && /^## / && $0 !~ anchor {exit}
+         found {print}
+       ' <文件路径> | shasum -a 256 | cut -c1-8
+       ```
+     - 跨对话执行自审校验时按上述粒度规则重算哈希，与 produced 记录值比对
+   
+   **锚点 slug 化伪代码（确定性规则）**：
+   ```js
+   slug = title
+     .replace(/[\(\)（）\[\]【】《》「」]/g, '')   // 移除所有括号类
+     .replace(/\s+/g, '-')                          // 空白转 -
+     .replace(/-+/g, '-')                           // 合并连续 -
+     .toLowerCase()                                 // 小写（保留中文不变）
+   ```
+   示例：`## 01-用户认证 代码审计报告（2026-05-11 第 2 轮）` → `01-用户认证-代码审计报告-2026-05-11-第-2-轮`
+   
+   **G0.4 校验**：状态恢复时按本字段校验产物文件是否存在 + 哈希是否一致 + 锚点是否命中；任一不通过 → 视为该章节未完成，触发"执行自审"回滚到该节重做（详见下方 G0.0 执行自审）
 
 ---
 
@@ -73,6 +126,98 @@ description: "SDD 开发工作流 v1.0.2 — G 系列全局规则始终加载，
 - 新消息**含新需求/指令**（如 "改成 XXX 需求" / "加个功能"）→ 追加到「待处理输入」，G0 完成后一并处理
 - 新消息**与 G0 询问无关**（如 "现在几点" / 闲聊）→ 暂不响应，提示 "请先完成项目类型确认 / 文档补充" 后继续
 
+**全局多轮交互打断规则**（适用于所有 slash 命令 + SKILL.md + §N.N 章节询问）：
+
+任何工作流询问（G0.X / SKILL.md Step 3~4 / `/sdd-bug-fix` G2 三选一 / `/sdd-prd-change` 各步询问 / §2.5 评审等）期间，**用户回复偏离当前 Step 预期选项时**（非该 Step 列出的 A/B/C/D 答案，且非"取消"/"继续"等明确指令），AI 必须：
+
+1. **暂停当前 Step**，不强行解析用户回复为答案
+2. 按 **G2 停车信号**格式输出：
+   ```
+   【G2 停车 - 多轮交互打断】
+   当前章节/Step：{§X.Y 章节名 / Skill Step N / 命令体 Step}
+   预期选项：{A/B/C/D 或具体格式}
+   用户回复：{用户原文}
+   AI 判断：用户回复未匹配预期格式，可能想改变流程方向 / 表达新需求 / 暂停验证
+   ```
+3. 提供三选一让用户确认：
+   - **A. 继续当前 Step**（请用户重新回复对应选项；AI 重复一次原询问）
+   - **B. 取消当前流程**（视情况回滚已生成内容；详见各命令体 / SKILL.md / 章节本身的回滚清单）
+   - **C. 跳到指定 Step**（用户指定跳转目标，如"跳到 Step 5" / "回到 G0.1"）
+4. 等待用户明确选择后再推进
+
+**SKILL.md / `/sdd-bug-fix` / `/sdd-prd-change` 等命令体保留各自的具体回滚清单**（如 SKILL.md 取消时回滚 AGENTS.md / symlinks / commands；`/sdd-bug-fix` 取消时清除 §3.0 通道选择记录等）。本节是行为统一规约，具体差异化处理见各命令体 / SKILL.md。
+
+**执行自审（统一机制，强制）**：
+
+「执行自审」是反偷懒校验的统一机制，**在两个触发点都要执行**：
+
+1. **跨对话开局触发**（仅后续路径）：G0.0 预处理完成后，扫描 context.md **最后一条记录**，校验上次会话最后一节是否完整
+2. **单会话每节进入前触发**（每次进入新 §N.N 章节前）：扫描**当前回答**中上一节的可见凭证，校验上节是否完整
+
+两个触发点共用同一套校验表 + 输出格式 + 处理规则。
+
+**校验表（统一标准）**：
+
+| 检查项 | 适用范围 | 通过条件 | 不通过处理 |
+|---|---|---|---|
+| `last` 字段存在 | 跨对话 | 最后一条记录末尾含 `last: §N.N` 或 `last: G0.N` | 缺失 → 触发 G2 停车「context.md 格式异常」，三选一：A 按 `/sdd-start` 场景 D 流程恢复 / B 用户手动指定当前章节后继续 / C 取消 |
+| 声明头存在 | 单会话 | 上节回答含 `【进入 §X.Y】` 标识 + 6 字段流程声明头 | 视为违反 G2 "路由不确定"，回滚到 §X.Y 重做 |
+| 声明头字段正确 | 单会话 | 6 字段值与 phase-*.md 真实定义一致 | Read phase-*.md 后修正 |
+| produced 字段（仅 §2.4 / §3.6 / §3.7 三个章节强制；其他 blocking 章节豁免，见第 8 条规约）| 两者 | 记录含 `produced: <路径>[#锚点] <hash>` | 缺 produced → **辅助判定**：若产物文件存在且含本模块本日的锚点 → 提示用户「产物存在但 produced 缺失，三选一：A 补写 produced 后继续 / B 重做该节 / C 触发 G2 停车，由用户进一步说明原因或选择处理方式」；否则视为该节未完成，回滚 |
+| 产物文件存在 | 两者 | `ls <路径>` 成功 | 文件缺失 = 伪造产物，回滚到该节重做 |
+| 哈希一致 | 跨对话 | `shasum -a 256 <文件> \| cut -c1-8` = produced 记录值 | 不一致 = 产物被外部改动或当时未真写入，回滚（外部改动场景由用户判定是接受新版本还是回滚）|
+| 锚点存在（含 #锚点-slug 时）| 两者 | `grep -F '<二级标题文本>' <文件>` 命中 | 锚点缺失 = 章节内容缺失，回滚 |
+| gated 章节回灌段 | 单会话 | 进入 blocking=gated 章节的回答含「上节产物回灌」段且回灌内容非空 / 哈希一致 | 缺回灌或回灌伪造 → 回滚到上节重做 |
+| audit-required 起手清单 | 单会话 | 进入 blocking=audit-required 章节的回答含「审计起手清单」段且怀疑点 ≥ 3 | 缺清单或怀疑点不足 → 回滚到本节重做 |
+
+**输出格式（必须输出作为可见凭证）**：
+
+**跨对话开局触发**：
+
+```
+【执行自审 - 跨对话】上次 last: §X.Y {章节名}（blocking: {true|false|gated|audit-required}）
+- last 字段: {✅ 存在 / ❌ 缺失 → G2 请用户决策}
+- produced: {✅ 存在 / ⚠️ 该章节豁免 / ❌ 缺失 → 辅助判定三选一}
+- 产物文件: {✅ <路径> / ❌ 回滚 §X.Y}
+- 哈希一致: {✅ 匹配 / ❌ 记录 {h1} vs 实际 {h2} 回滚 / N/A 豁免}
+- 锚点存在: {✅ 命中 / ❌ 回滚 / N/A 无锚点}
+- 辅助判定: {N/A / ⚠️ 三选一}
+结论: {✅ 继续 G0.4.1 / ❌ 回滚到 §X.Y / ⚠️ 用户决策中}
+```
+
+**单会话每节进入触发**（两版按 blocking 选用）：
+
+| 触发版本 | 用于 | 输出格式 |
+|---|---|---|
+| **完整版** | blocking ∈ {true, gated, audit-required}，或自愈循环 / §4 整链重走（强制完整版）| `【执行自审 - 进入 §X.Y】上一节 §A.B (blocking: ...)`<br>`- 声明头/字段正确/gated 回灌/起手清单/出口产物` 5 项校验<br>`结论: ✅ 本节正式开始 / ❌ 回滚 §A.B` |
+| **简化版** | 当前 blocking=false 且上一节 blocking=false 或 G 系列，且非自愈/重走场景 | `【执行自审 - 进入 §X.Y】上一节 §A.B (blocking: false) ✅ 无强制校验项` |
+
+完整版输出示例（每项校验状态枚举）：
+
+```
+【执行自审 - 进入 §X.Y】上一节 §A.B {章节名}（blocking: {...}）
+- 声明头: {✅ 完整 / ❌ 缺失，回滚 §A.B}
+- 字段正确: {✅ 与 phase-*.md 一致 / ❌ Read 修正}
+- gated 回灌（§A.B 是 gated 时）: {✅ 完整 / N/A / ❌ 回滚}
+- 起手清单（§A.B 是 audit-required 时）: {✅ ≥3 怀疑点 / N/A / ❌ 回滚}
+- 出口产物（§A.B 是 §2.4/§3.6/§3.7 时）: {✅ 文件+锚点+produced / ❌ 回滚}
+结论: {✅ 上节完整，本节正式开始 / ❌ 回滚 §A.B}
+```
+
+完整版适用场景：blocking ∈ {true, gated, audit-required} 章节进入时；或自愈循环 / 整链重走时（任何 blocking 值都必须用完整版核验）。
+
+**处理规则**：
+
+- 任一不通过 → **立即回滚到对应章节重做**，禁止"将错就错"继续
+- 回滚不视为流程失败，是负责任的兜底；告知用户原因并请用户确认（参考 G2 停车信号语义）
+
+**特殊豁免**：
+
+- **G 系列豁免**：上一节属于 G 系列（G0.0 / G0.1 / G0.2 / G0.3 / G0.4 / G0.4.1 / G0.5 / G1 / G2 / G3）时，**单会话每节进入触发的执行自审中**「上一节声明头 / 字段正确 / 回灌 / 起手清单 / 出口产物」全部检查豁免——G 系列章节不带声明头（AGENTS.md 第 4 条规定），不消费这些校验。仍输出执行自审段作为可见凭证，但相应字段标 `N/A（上一节为 G 系列）`。
+- **跨对话已校验简化**：若本次会话 G0.0 跨对话执行自审已对某产物章节通过校验（含 shasum + 锚点 + 文件存在），同一会话内首次进入下一节时（如 G0.0 校验 §3.7 通过 → 路由到 §3.8 进入回灌段），shasum 重跑可标注 `（哈希已在 G0.0 跨对话自审校验，本节简化）`；锚点 + 文件存在 + 子节齐全度仍需现场校验。
+
+**与 G2 停车信号的关系**：执行自审 = 入口检查 + 出口审计 + 跨对话校验三合一；G2 停车信号是 5 类"中途异常"。两者互补，前者管"流程合规性"，后者管"业务异常"。
+
 > **Slash 命令豁免**：当用户首条消息是 slash 命令（`/sdd-init` / `/sdd-start` / `/sdd-prd-change` / `/sdd-bug-fix` / `/sdd-prd-audit` / `/sdd-front-context` / `/sdd-back-context` / `/sdd-frontend-standards` / `/sdd-java-create` / `/sdd-wap-create` / `/sdd-reverse-scan` / `/sdd-test-case` / `/sdd-unit-test` 任意一个）时：
 > - **G0.0 不强制**走 G0 路径，由命令体自己负责前置检查和阶段路由
 > - 命令体内部仍受 G0.5 阶段执行约束 + Skill 调用强制约束（见下方）
@@ -94,7 +239,7 @@ description: "SDD 开发工作流 v1.0.2 — G 系列全局规则始终加载，
 > | A. 未装工作流 | 项目根目录无 `AGENTS.md` | 提示「请先 `/sdd-init`」并退出 |
 > | B. 首次开发 | `AGENTS.md` 存在，`context.md` 不存在或无有效记录 | 走 G0 首次路径 |
 > | C. 已在开发中 | `context.md` 已有 `last` 字段 | 输出当前进度，三选一：A 继续上次（G0 后续路径）/ B 重新开始（**强制全量备份**到 `.sdd-bak.{YYYYMMDDHHmm}/`，含 `.project/` + `.test/` + `.outdocs/`，并询问 `AGENTS.md` 是否一并备份重置后走首次路径）/ C 取消 |
-> | D. 异常状态 | 有 `.project/` 但无 `context.md` | 保守询问：A 走首次路径 / B 取消（不自动反推 specs 状态） |
+> | D. 异常状态 | 有 `.project/` 但无 `context.md` | 先扫描 `.project/specs/master/` 现状（index.md / REQ / DES / 原型 / TC-F / 交付文档）作为决策上下文，三选一询问：A 走首次路径（保留现有内容）/ B 手动指定恢复点（创建 context.md 一条记录后走后续路径，恢复记录 produced 字段留空，下次正常进入对应章节时补写）/ C 取消。详见 `{SKILL_DIR}/.claude/commands/sdd-start.md` 场景 D |
 >
 > 即便 AI 因上下文丢失"忘了"流程，也必须按本约束重新执行；这是 `/sdd-start` 的最高优先级路由。详细备份步骤见 `{SKILL_DIR}/.claude/commands/sdd-start.md`。
 
@@ -112,7 +257,7 @@ AI 根据「待处理输入」是否含项目特征，分两种模式输出：
 
 ```
 【项目确认】
-基于你刚才的描述，我推断这是「A 新项目」。
+基于你**首次启动时**描述的「{项目特征片段，如"做个砍价小程序"}」，我推断这是「A 新项目」。
 请确认或修正：
   A. 新项目（请提供 PRD）  ← AI 推断
   B. 旧项目 — 新增需求
@@ -121,6 +266,8 @@ AI 根据「待处理输入」是否含项目特征，分两种模式输出：
 
 （你的需求描述将作为"对话粘贴的 PRD"在 §1.1 处理，不必重复）
 ```
+
+> {项目特征片段} 由 AI 从原始消息提取（去掉"启动工作流"等触发词后的剩余文字）。
 
 **模式 B：「待处理输入」不含项目特征**（如纯 "启动工作流" / "开始" / "你好" 等）
 
@@ -131,9 +278,14 @@ AI 根据「待处理输入」是否含项目特征，分两种模式输出：
   B. 旧项目 — 新增需求
   C. 旧项目 — Bug 修复
   D. 旧项目 — 技术优化
+
+需求输入方式提示（首次启动时）：
+  · 如果你想直接告诉我需求（不走 PRD 文件流程），可以在本条回复中**同时**描述项目意图（如"A，做个砍价小程序，Vue 前端"），我会自动按模式 A 推断处理，并把你的描述作为「对话粘贴的 PRD」在 §1.1 消费。
+  · 如果 PRD 文档已经在 .docs/prd/ 里，选 A 后我会在 G0.3 提示你确认并自动读取。
+  · 都没有也没关系，选 A 后到 G0.3 还会再问一次"放好了 / 粘贴需求 / 跳过"。
 ```
 
-用户回复确认后，AI 才进入 G0.2。
+用户回复确认后，AI 才进入 G0.2。**若用户回复同时含项目特征**（如"A 做个砍价小程序"），AI 直接按模式 A 路径处理（推断已确认 + 项目特征作为「对话粘贴的 PRD」入 §1.1），跳过等待确认环节。
 
 > **判别规则**：「项目特征」指消息中含具体项目类型（如 Vue/Java）、产品名（"砍价模拟器"等）、功能描述（"做个 XXX 系统"）、明确角色（"新项目"/"旧项目"）。模糊不清时按模式 B 处理。
 
@@ -157,66 +309,27 @@ AI 根据「待处理输入」是否含项目特征，分两种模式输出：
 .agents/skills/
 ```
 
-**项目根 `.test-env.md` 模板生成**（已存在则跳过）：
-
-G0.2 在**项目根目录**（不是 `.test/` 子目录）生成 `.test-env.md` 文件，供 test-case-design Skill（§2.7）和 unit-test-generator Skill（§3.7.1）读取运行时配置使用。
-
-> **重要**：`.test-env.md` 必须放在**项目根目录**，与 Skill 的默认查找路径一致（详见 `{SKILL_DIR}/tools/test-case-design/references/test-env-template.md`，该文件是模板和字段的**唯一权威来源**）。
-
-**生成步骤**（AI 必须按此执行）：
-
-1. **Read 权威模板**：`{SKILL_DIR}/tools/test-case-design/references/test-env-template.md`
-2. **取出其中"## 一、完整模板"段内 ` ```` ```markdown ... ```` ` 代码块的内容**（约 33 行，含服务端点 / 测试数据库 / 测试运行命令 / **MCP 能力声明** / 单测目录约定 / 全局变量 6 大段，不得简化）
-3. **按下方"自动检测填充约束"主动检测项目实际配置**，用真实值替换模板默认值
-4. 写入项目根 `.test-env.md`
-
-**自动检测填充约束（强制）**：AI **不得直接套用模板默认值**，必须按下表逐一用 Read/Bash/Glob 工具检测项目实际配置后再写入。检测不到的字段保留权威模板的占位值并在该行末标注 `  # TODO 用户填写`（注释前两个空格）：
-
-| 字段类别 | 必须检测的来源 | 示例 |
-|---|---|---|
-| `test_db.type` / `test_db.dsn` | `application.yml` / `application.properties` / `.env` / `.env.example` / `docker-compose.yml`；后端 `package.json` 的依赖（pg / mysql2 / better-sqlite3 等） | MySQL / PostgreSQL / SQLite |
-| `test_commands.frontend` | 前端 `package.json` 的 `scripts.test`（如有 `pnpm-lock.yaml` 用 `pnpm test`、`yarn.lock` 用 `yarn test`、否则 `npm test`） | `npm test` / `pnpm test` / `yarn test` |
-| `test_commands.backend` | 后端构建文件：`pom.xml` → `mvn test` / `build.gradle` → `gradle test` / `go.mod` → `go test ./...` / `pyproject.toml` 或 `setup.py` → `pytest` 或 `python -m pytest` | `mvn test` / `gradle test` / `go test` |
-| `test_dirs.frontend_unit` | 实际扫描（`Glob src/**/__tests__` / `**/*.test.{ts,js}` / `**/*.spec.{ts,js}`），取最常见的目录 | `src/__tests__` / `tests/` |
-| `test_dirs.backend_unit` | 实际扫描（Java：`src/test/java`；Go：与源码同目录的 `*_test.go`；Python：`tests/`） | `src/test/java` / `tests/` |
-| `base_url.local` | 后端启动配置（`application.yml` 的 `server.port` / `package.json` 的 `start` 脚本端口）；`.docs/tech/` 中的 API 文档 | `http://localhost:8080` / `:3000` |
-| `MCP 能力声明` | 当前 AI 工具能力（Claude Code 通常有 `shell`；`http-client` / `sql-runner` / `playwright` 取决于是否装了对应 MCP；不确定时仅列 `shell`） | 列出实际可用的能力 |
-| `vars.*` | 保留权威模板的示例值，**全部标注 `# TODO 改为项目实际测试账号`**（账号密码不应由 AI 推测） | — |
-
-**违反检测**：
-- 如果 AI 写入的 `.test-env.md` 字段值与权威模板默认值**完全相同**（如 `mysql://test:test@localhost:3306/app_test`）但**未在该行末标注 `# TODO`** → 视为未检测，**必须重做**
-- 如果某字段未做实际检测就填值（如未 Read package.json 就写 `npm test`）→ 同上
-
-> **修改不阻断流程**：用户不改 `# TODO` 字段也能继续。test-case-design / unit-test-generator 会自动降级（manual / in-memory 模式）。
+> **`.test-env.md` 不在 G0.2 生成**：测试环境配置文件由 §2.7 / §3.7.1 首次进入时**按需生成 + 自动扫描项目实际配置补全**，避免启动时无谓扫描。详见 phase-spec.md §2.7 / phase-coding.md §3.7.1 的「`.test-env.md` 按需生成 + 自动检测」段。
 
 **G0.3 文档补充确认**（已存在则跳过）：
 
 检查 `.docs/prd/` 和 `.docs/tech/` 是否为空：
-- 均为空 → 必须暂停，询问用户：
+- 均为空 → 必须暂停，询问用户（三选项明示）：
 
 ```
-【文档补充】
-目录已创建，请将已有文档放入对应子目录后告诉我：
+【文档补充】目录已创建，请告诉我下一步（三选一）：
 
-  · .docs/prd/             — PRD 文字需求（md/pdf）
-  · .docs/prd/prototype/   — 原型图（线框图，png/jpg/pdf）
-  · .docs/prd/ui/          — UI 设计稿（高保真视觉，png/jpg/pdf）
-  · .docs/prd/ui-spec/     — UI 解析文件（Figma/蓝湖导出的 md）
-  · .docs/tech/            — 技术文档（API 文档/建表脚本/中间件配置等）
-
-不确定归类的文件可直接放 .docs/prd/ 根目录，AI 会自动识别。
-
-  · 项目根 .test-env.md — 测试环境配置（G0.2 已按项目实际检测自动填充，标 # TODO 的字段请按实际环境修改；
-    不修改也不阻断，test-case-design / unit-test-generator 会自动降级为 manual / in-memory 模式）
-
-放好后回复"放好了"继续，或回复"没有文档"跳过。
+  A. 已放好文档（回"放好了"，我重新扫描 .docs/）
+     可放: .docs/prd/{,prototype,ui,ui-spec}/ + .docs/tech/，不确定的文件直接放 .docs/prd/ 根目录
+  B. 没 PRD 但现在直接粘贴需求（写在本条回复，AI 当作"对话粘贴的 PRD"入 §1.1）
+  C. 都没有也不粘贴（回"跳过"，§1.1 询问技术栈直接脚手架）
 ```
 
-- 仅 `.docs/prd/` 根目录 + 其所有子目录（prototype/、ui/、ui-spec/）都无任何文件 → 提示「.docs/prd/ 为空，新增需求（feature）后续需要 PRD 才能进入设计，建议现在放入。回复"没有"跳过（后续可在对话中直接粘贴需求描述）」
-- 仅 `.docs/tech/` 为空 → 不阻断（技术文档可选）
-- 均不为空 → 跳过
+- 仅 `.docs/prd/` 及其子目录（prototype/、ui/、ui-spec/）全空 → 同上三选一提示
+- 仅 `.docs/tech/` 为空 → 不阻断
+- 均不为空 → 跳过本节
 
-> **用户回复"放好了"后**，AI 必须重新扫描 `.docs/` 再继续。
+> **选项处理**：A → 重扫 `.docs/` 进入 G0.5；B → 粘贴内容入 §1.1 进入 G0.5；C → §1.1 询问技术栈推进。
 
 → 进入 G0.5 阶段路由
 
@@ -228,33 +341,29 @@ G0.2 在**项目根目录**（不是 `.test/` 子目录）生成 `.test-env.md` 
 
 **G0.4 状态恢复**：读取以下文件恢复状态：
 
-- `.project/context.md` — 恢复工作进度。**读取最后一条记录的 `last: §N.N` 字段**作为当前章节位置（规约见本节第 7 条）；若 `last` 字段不存在（历史数据），则从最后一条记录的文本描述推理当前阶段
+- `.project/context.md` — 恢复工作进度。**读取最后一条记录的 `last: §N.N` 字段**作为当前章节位置（规约见本节第 7 条）；若 `last` 字段不存在 → 触发 G2 停车「context.md 格式异常」，三选一：A 按 `/sdd-start` 场景 D 流程恢复 / B 用户手动指定当前章节后继续 / C 取消
 - `.project/task.md` — 恢复子任务进度（如存在）
 - `.project/specs/rules/project-profile.md` — 恢复项目级认知（铁律/技术栈/外部依赖/业务架构）
 - `.project/specs/rules/frontend-context.md` — 恢复前端规范（如存在）
 - `.project/specs/rules/backend-context.md` — 恢复后端规范（如存在）
 
+**produced 字段校验**（last 指向的章节 blocking ∈ {true, gated, audit-required} 时强制）：
+
+按 G0.0「执行自审 - 跨对话」表执行 produced + 产物文件 + 哈希 + 锚点四项校验（详见 G0.0 段）。任一不通过 → 视为该章节未完成，**先回滚到该章节重做**，再进入 G0.4.1 推断意图。执行自审在 G0.0 已发生；G0.4 此处是其结果落地：若 G0.0 自审标记回滚 §X.Y，G0.4 直接定位到 §X.Y 而不是 last 字段值。
+
 **G0.4.1 任务意图推断**（替代首次路径的 G0.1，后续对话时执行）：
 
-AI 根据用户**首条消息**推断当前意图，**直接执行，不等待确认**。推断后输出一行简短状态提示（非阻塞），让用户知道 AI 的理解：
+AI 根据用户**首条消息**推断当前意图，**直接执行，不等待确认**。推断后输出一行简短状态提示（非阻塞）。下表合并初步推断 + bug 二次判定：
 
 | 用户表述示例 | 推断意图 | 处理 |
 |---|---|---|
-| "继续" / "接着做" / "继续开发" / 无明确新任务 | 延续上次 | 按 context.md `last` 字段定位，继续原任务原类型 |
-| "我要加功能" / "新增 XXX" / "做 XXX 需求" | 新增 feature | 新任务，类型=feature |
-| "有个 bug" / "XXX 报错" / "修复 XXX" / "XXX 不正常" | bug 修复 | **二次判定**（见下方 bug 意图二次判定） |
-| "优化 XXX" / "重构 XXX" / "性能问题" / "代码整理" | refactor | 新任务，类型=refactor |
-| 无法推断（模糊表述） | 不确定 | 触发 G2 停车信号，请用户明确意图 |
-
-**Bug 意图二次判定**：
-
-推断为 bug 后，AI 必须结合 context.md `last` 字段 + bug 描述内容，区分两种场景：
-
-| 判定条件 | 场景 | 处理 |
-|---|---|---|
-| `last` 在 §3.x 或 §4，**且** bug 描述涉及的模块/功能/接口/页面与 context.md 记录的当前模块一致 | **当前需求 bug** | 加载 `{SKILL_DIR}/rules/phase-coding.md`，直接进入 §3.0 通道判断（bug 修复回环），**跳过 G0.5** |
-| `last` 不在 §3.x~§4，**或** bug 与当前模块无关 | **新 bug 工单** | 新任务，类型=bug，进入 G0.5 → §2.2 |
-| 无法判定归属 | 不确定 | 触发 G2 停车信号：「这是当前需求 {模块名} 的 bug，还是一个独立的新 bug？」 |
+| "继续" / "接着做" / 无明确新任务 | 延续上次 | 按 context.md `last` 字段定位，继续原任务原类型 |
+| "加功能" / "新增 XXX" / "做 XXX 需求" | 新增 feature | 新任务，类型=feature |
+| "优化 XXX" / "重构 XXX" / "性能问题" | refactor | 新任务，类型=refactor |
+| **bug 类**："有个 bug" / "XXX 报错" / "XXX 不正常"，且 `last` 在 §3.x/§4 + bug 涉及模块与 context.md 当前模块一致 | **当前需求 bug** | 加载 phase-coding.md，**直接 §3.0 跳过 G0.5** |
+| **bug 类**：同上但 `last` 不在 §3.x/§4 或 bug 与当前模块无关 | **新 bug 工单** | 新任务 type=bug，G0.5 → §2.2 |
+| **bug 类**：归属无法判定 | 不确定 | G2 询问"是当前 {模块} 的 bug 还是新 bug？" |
+| 无法推断（模糊） | 不确定 | G2 停车请用户明确意图 |
 
 > **排他**：以下意图不进入 bug 修复回环，即使 `last` 在 §3.x~§4 也走原流程：
 > - "需求变更" / "改一下需求" / "加个字段" → feature 或 §2.6 Spec Sync
@@ -290,7 +399,7 @@ AI 根据用户**首条消息**推断当前意图，**直接执行，不等待�
 
 > **重要**：按下方「G0.5 阶段执行约束」处理 — 进入每个 §N.N 章节前先输出流程声明头作为凭证；详细规则按需 Read 对应 phase-*.md（不强制每次都重读，速查表 + 已加载的 G 系列规则覆盖大部分场景）。
 
-#### G0.5 阶段执行约束（声明式校验）
+#### G0.5 阶段执行约束（声明式校验 + 四值 blocking + 反惯性强制）
 
 进入任何 §N.N 章节执行动作前，AI **必须**先输出该章节的流程声明头作为凭证。**输出格式必须与 phase-*.md 章节顶部真实声明头完全一致**（含"流程声明"标题 + 6 字段：phase / step / prev / next / gate / blocking），并在前面加一行 `【进入 §X.Y {章节名}】` 作为 AI 标识：
 
@@ -302,29 +411,91 @@ AI 根据用户**首条消息**推断当前意图，**直接执行，不等待�
 > - prev: {严格按 phase-*.md 章节顶部声明头复制，不得简化}
 > - next: {严格按 phase-*.md 章节顶部声明头复制}
 > - gate: {G1 写码门禁 | none}
-> - blocking: {true | false}
+> - blocking: {true | false | gated | audit-required}
 ```
 
 输出后才执行该章节正文动作。
 
-**违反检测**：
-- 执行 §X.Y 动作但**没有**先输出声明头 → 视为违反 G2 信号「路由不确定」，停止当前动作
-- 输出的声明头**任一字段值**与 phase-*.md 真实定义不符 → AI 必须按需 Read 对应 phase-*.md 后修正
-- 自创/简化 prev / next 描述（不按真实头逐字复制）→ 同上
+##### blocking 四值语义
 
-**何时主动 Read phase-*.md**（按需，节省 token）：
+| 取值 | 含义 | 进入约束 | 跳过后果 |
+|---|---|---|---|
+| `true` | 必须执行（按条件触发时） | 仅输出声明头 | 跳过 = 流程错误，触发 G2 停车 |
+| `false` | 可选 / 无前置依赖 | 仅输出声明头 | 可按条件跳过，不视为违反 |
+| `gated` | 必须先回灌上节产物才能进入 | 声明头后立即输出「上节产物回灌 + 本节输入承诺」两段 | 缺回灌 = 视为未进入，下次执行自审回滚到上节重做 |
+| `audit-required` | 必须输出审计起手清单（怀疑点驱动） | 声明头后立即输出「审计起手清单（≥3 具体怀疑点 + 验证 + 最低产出承诺）」 | 缺审计起手清单段或怀疑点 < 3 = 视为敷衍，回滚到本节重做 |
+
+##### gated 章节进入约束
+
+进入 blocking=gated 的章节时，声明头**之后**必须立即追加「上节产物回灌 + 本节输入承诺」两段，格式严格遵循对应 phase-*.md 章节的「上节产物回灌」段落规约：
+
+```
+【上节产物回灌】（gated 章节强制）
+执行 Bash: <章节正文规定的 cat / grep / shasum 命令>
+粘贴实际输出（不是描述/总结，必须是工具回显原文）：
+"""
+<工具回显原文>
+"""
+
+本节输入承诺：基于上述产物中的 <具体 ID / 路径 / 锚点> 执行 <本节核心动作>
+```
+
+回灌内容不存在 / 内容为空 / 仅含空骨架（无 path:line 证据） / 哈希与 context.md `produced` 字段不一致 → 视为上节未真做，**立即回滚到上节重做**，禁止继续本节。
+
+##### audit-required 章节进入约束
+
+进入 blocking=audit-required 的章节时，声明头**之后**必须立即输出「审计起手清单」（至少 3 个具体怀疑点 + 验证 + 最低产出承诺）：
+
+```
+【审计起手清单】（audit-required 章节强制）
+进入正式审计前，必须先列出至少 3 个具体怀疑点（基于本次改动 + 本节标准维度），格式：
+  - 怀疑点 1：针对 {标准项编号}，{改动文件 path:line}，反向假设"如果 {具体场景} 会怎样？"
+  - 怀疑点 2：...
+  - 怀疑点 3：...
+
+逐条对照代码验证：每个怀疑点必须给出"成立 / 不成立 + path:line 证据"。
+
+最低产出：
+  · 至少 3 个 finding（成立的怀疑点 + 验证过程中发现的新问题），或修复项 ≥ 3
+  · 若全部不成立且 finding < 3 且修复项 < 3 → 必须追加「我为什么相信代码无问题」辩护段，逐条引用 path:line 证据反驳常见失败模式
+
+反惯性约束：禁止输出"代码符合预期 / 逻辑正确 / 实现合理"等无 path:line 证据的肯定句；任何 PASS 判定必须附改动文件的 path:line
+```
+
+输出后再执行本节正文。
+
+##### 单会话每节进入前的执行自审
+
+进入下一节前，AI **必须**按 G0.0「执行自审」段的"单会话每节进入触发"格式输出可见凭证（见 G0.0 输出格式 + 校验表）。该输出**逐字必现**，不得省略。
+
+校验表（gated 回灌 / audit-required 起手清单 / 出口产物 / 哈希 / 锚点）与 G0.0 跨对话自审共用，详见 G0.0「执行自审」段。
+
+跳过此输出 = 流程违规，用户有权要求回滚。
+
+##### 横切章节豁免
+
+横切动作章节（§2.6 Spec Sync、§1.5 技术文档处理等）可在任意阶段触发，**无固定 prev**，因此豁免：
+- 声明头照常输出，**prev / next 字段豁免严格比对**：phase-*.md 中横切章节真实 prev=none，但 AI 按当前真实触发源填写时**不视为字段不符**；同时建议在声明头下方追加一行 `> 触发源: §X.Y`，作为补充信息
+- gated 回灌段免输出（无上节固定产物）
+- audit-required 不适用（横切章节无审计语义）
+- 执行自审单会话每节进入触发的输出改为：① 触发源是什么？② 触发前 last 是什么（用于回归路由）？③ 本次横切动作产出是什么？
+
+##### 何时主动 Read phase-*.md（按需，节省 token）
+
 - AI 自感不确定章节内容（流程声明头与下方"阶段速查表"对不上）
 - 用户明确要求"请按 phase-X.md §X.Y 执行"
 - 进入审计/自测等需要详细规则的章节（§3.6 / §3.7 → quality-standards.md）
+- 进入 blocking=gated / audit-required 章节时（需读出口产物 schema 才能正确回灌 / 起手清单）
 
-**何时跳过 Read**（绝大多数日常场景）：
+##### 何时跳过 Read（绝大多数日常场景）
+
 - AI 已能从下方"阶段速查表" + AGENTS.md G 系列规则推导出执行步骤
 - 已经在当前会话上下文中读过该章节
 
 > **Slash 命令的差异化执行**：
 > - 工具触发类命令选「A 独立执行」：仅 Read SKILL.md（按 Skill 调用强制约束），**不强制**输出阶段声明头（独立执行不进入工作流阶段）
-> - 工具触发类命令选「B 工作流内」：必须按 last 字段映射阶段，输出对应声明头
-> - 流程触发类命令（4 个）：命令体自有路由机制，按命令体的"前置检查 / 四场景路由 / 二次判定"执行，不强制叠加本约束
+> - 工具触发类命令选「B 工作流内」：必须按 last 字段映射阶段，输出对应声明头（含四值 blocking 相应约束）
+> - 流程触发类命令（4 个）：命令体自有路由机制，按命令体的"前置检查 / 四场景路由 / 二次判定"执行，不强制叠加本约束；但若命令体内部进入 §X.Y 时仍受四值 blocking 约束
 
 **类型映射**（贯穿后续所有阶段）：
 
@@ -350,7 +521,7 @@ AI 根据用户**首条消息**推断当前意图，**直接执行，不等待�
 | 2 | 当前功能有 REQ + DES 且 `review-status: approved` | → 先完成需求分析+方案设计    |
 | 3 | 阻塞依赖已就绪（用户明确说"跳过"的视为就绪）        | → 等待用户提供或确认跳过      |
 | 4 | 技术栈对应的编码/审计 Skill 已安装                  | → 读取 `{SKILL_DIR}/rules/skill-routing.md` 按流程安装 |
-| 5 | task.md 中当前模块有 pending 子任务                 | → 定位下一个 pending 子任务   |
+| 5 | task.md 中当前模块有 **pending 或 in-progress** 子任务（跨对话恢复时 in-progress 视为合法继续状态）| → 定位下一个 pending 或当前 in-progress 子任务 |
 | 6 | 本次变更与项目铁律无冲突                            | → 列冲突点 + 替代方案，触发 G2 停车信号 |
 
 **检查项 #4 Skill 安装检查规则**：根据 project-profile.md「技术栈」声明，检查以下目录是否存在：
@@ -360,15 +531,15 @@ AI 根据用户**首条消息**推断当前意图，**直接执行，不等待�
 - 代码审计 → 无内置审计 Skill，使用 `{SKILL_DIR}/rules/quality-standards.md` 中 S-01~S-07 + S-08
 - 内置 Skill 缺失 → 读取 `{SKILL_DIR}/rules/skill-routing.md` 按兜底规则处理
 
-**检查项 #5 Task 定位规则**：读取 `.project/task.md`，定位当前模块的下一个 pending 子任务，输出：
+**检查项 #5 Task 定位规则**：读取 `.project/task.md`，**优先定位当前模块的 in-progress 子任务（跨对话恢复场景），否则定位下一个 pending 子任务**，输出：
 
 ```
-【当前任务】{ID} [{类型}] {描述}
+【当前任务】{ID} [{类型}] {描述}（状态：{in-progress / pending}）
 【模块进度】{done}/{总数}
 ```
 
 - task.md 不存在（bug 类型无 task.md；refactor 类型用户选择不创建时无 task.md）→ 跳过此检查项
-- 当前模块无 pending 子任务 → 进入归档（读取 `{SKILL_DIR}/rules/phase-archive.md`）
+- 当前模块**既无 in-progress 也无 pending 子任务** → 进入归档（读取 `{SKILL_DIR}/rules/phase-archive.md`）
 
 **快速通道豁免**：仅样式/文案的快速通道任务，检查项 #2 简化为：REQ + DES 可各简化为一句话描述，免评审。AI 在进入 §3.1 前，在对应 REQ + DES 文件中追加一句话记录（文件不存在则新建）。检查项 #5 跳过（快速通道不更新 task.md，样式/文案改动不对应独立子任务）。
 
@@ -413,6 +584,8 @@ AI 根据用户**首条消息**推断当前意图，**直接执行，不等待�
 | `rules/phase-archive.md` | **§4 归档** | 模块编码完成后 |
 | `rules/quality-standards.md` | 审计标准（PRD/REQ/DES/代码/自测） | 执行审计时 |
 | `rules/skill-routing.md` | Skill 路由表 + 安装/执行流程 | 需要安装或调用 Skill 时 |
+| `rules/slash-commands.md` | **Slash Commands 详细路由**（4 流程触发 + 9 工具触发 + 流程冲突保护两类）| 用户触发 `/sdd-*` 命令或 AI 决定如何路由命令时 |
+| `rules/project-structure.md` | **.project 完整目录树状结构图**（含每个文件 + 注释）| 用户询问目录结构 / AI 需追溯具体路径时 |
 | `rules/fallback/frontend-scan.md` | 前端内置扫描（兜底） | 前端 context skill 不可用时 |
 | `rules/fallback/backend-scan.md` | 后端内置扫描（兜底） | 后端 context skill 不可用时 |
 | `templates/project-profile.tpl.md` | project-profile.md 模板（仅项目级） | 初始化 profile 时 |
@@ -420,146 +593,44 @@ AI 根据用户**首条消息**推断当前意图，**直接执行，不等待�
 
 ---
 
-## Slash Commands 入口表
+## Slash Commands 入口（概览，详细路由按需 Read）
 
-用户可通过 slash 命令显式触发本工作流的关键流程；命令文件位于 `{SKILL_DIR}/.claude/commands/`，由 `/sdd-init` 安装到用户级（`~/.claude/commands/`）或项目级（`.claude/commands/`）。AI 在用户调用命令时按本表路由：
+13 个命令，命令文件位于 `{SKILL_DIR}/.claude/commands/`，由 `/sdd-init` 安装到用户级或项目级。
 
-> **G0.0 豁免规则**：用户首条消息是 slash 命令时，**G0.0 不强制**走 G0 路径，由命令体自有路由机制处理（含前置检查 / 四场景路由 / 二次判定等）；仅对 slash 命令直接触发生效。**自然语言**触发（如"启动工作流"/"做新项目"）仍按 G0.0 强制走 G0 路径。命令体内部进入 §X.Y 时仍受 G0.5 阶段执行约束（输出流程声明头）+ Skill 调用强制约束（5 步走）。
-
-### 流程触发类（4 个）
-
-| 命令 | 绑定流程 | AI 路由动作 |
+| 类型 | 命令 | 简述 |
 |---|---|---|
-| `/sdd-init` | SKILL.md 安装/更新/状态/卸载 | 读取并执行 `{SKILL_DIR}/SKILL.md`，按 A/B/C/D 四选一执行 |
-| `/sdd-start` | G0 对话初始化 | 必读 AGENTS.md + context.md，按上方「`/sdd-start` 触发约束」四场景路由 |
-| `/sdd-prd-change` | §2.6 Spec Sync `[prd]` | 读取 `{SKILL_DIR}/rules/phase-spec.md` §2.6，按 Step1~6 完整执行；结束后按倒数第二条 last 返回原阶段 |
-| `/sdd-bug-fix` | G0.4.1 当前需求 bug 二次判定 → §3.0 bug 修复回环 | 按 G0.4.1 二次判定表分流；判定为当前需求 bug → §3.0 通道判断；不归属或不确定 → G2 停车三选一 |
+| **流程触发**（4 个）| `/sdd-init` | SKILL.md 安装/更新/状态/卸载 |
+| | `/sdd-start` | G0 对话初始化（四场景路由）|
+| | `/sdd-prd-change` | §2.6 Spec Sync `[prd]` 入口 |
+| | `/sdd-bug-fix` | G0.4.1 当前需求 bug 二次判定 → §3.0 回环 |
+| **工具触发**（9 个）| `/sdd-prd-audit` | §1.1 / §1.2(feature) / §2.6[prd] PRD 审计 |
+| | `/sdd-front-context` | §1.3 前端规范提取 |
+| | `/sdd-back-context` | §1.3 后端规范提取 |
+| | `/sdd-frontend-standards` | §3.5 前端代码变更规范 |
+| | `/sdd-java-create` | §1.1 后端项目初始化（Java）|
+| | `/sdd-wap-create` | §1.1 前端项目初始化（WAP）|
+| | `/sdd-reverse-scan` | §1.4 深度业务代码扫描 |
+| | `/sdd-test-case` | §2.7 功能测试用例设计 |
+| | `/sdd-unit-test` | §3.7.1 自动化单测 |
 
-### 工具触发类（9 个，按统一 Skill 执行流程）
+> **G0.0 豁免规则**：slash 命令首条触发时 G0.0 不强制走 G0 路径，由命令体自有路由处理；自然语言触发不豁免。命令体内进入 §X.Y 仍受 G0.5 阶段执行约束 + Skill 调用强制约束。
 
-| 命令 | 对应 Skill | 绑定阶段 | 执行流程 |
-|---|---|---|---|
-| `/sdd-prd-audit` | `tools/prd-audit/` | §1.1 / §1.2(feature) / §2.6[prd] | 读 skill-routing.md → 读 SKILL.md → 执行 → 输出 Skill 执行日志 |
-| `/sdd-front-context` | `tools/front-project-context/` | §1.3 前端规范提取 | 同上；产出 `mv` 到 `.project/specs/rules/frontend-context.md` |
-| `/sdd-back-context` | `tools/back-project-context/` | §1.3 后端规范提取 | 同上；产出 `mv` 到 `.project/specs/rules/backend-context.md` |
-| `/sdd-frontend-standards` | `tools/frontend-code-standards/` | §3.5 前端代码变更 | 同上；融合优先级见 §3.5 |
-| `/sdd-java-create` | `tools/java-project-creator/` | §1.1 后端项目初始化 | 同上；可独立执行（SDD 未初始化时） |
-| `/sdd-wap-create` | `tools/wap-project-creator/` | §1.1 前端项目初始化 | 同上；可独立执行 |
-| `/sdd-reverse-scan` | `tools/reverse-scan/` | §1.4 深度业务代码扫描 | 同上；产出在 `.project/reverse-scan/`；AI 执行合并到 profile/overview/api-doc/context |
-| `/sdd-test-case` | `tools/test-case-design/` | §2.7 功能测试用例设计 | 同上；自动注入 SDD 模式参数（task_type/output_dir/csv_template） |
-| `/sdd-unit-test` | `tools/unit-test-generator/` | §3.7.1 自动化单测 | 同上；自主设计模式；自动注入 frameworks/exec_mode；前置清理 generated/ 残留 |
-
-### 流程冲突保护（仅适用 9 个工具触发类命令）
-
-> **流程触发类（4 个）各自有自有机制，不复用本模板：**
-> - `/sdd-init`：基础设施操作，不绑定阶段，无冲突场景
-> - `/sdd-start`：四场景路由（A 未装 / B 首次 / C 进行中 / D 异常，详见上方"`/sdd-start` 触发约束"）
-> - `/sdd-prd-change`：前置检查（无 AGENTS.md/无 context.md → 退出） + 严格按 §2.6 流程
-> - `/sdd-bug-fix`：前置检查 + G0.4.1 二次判定 + G2 停车三选一（A 走回环 / B 走新 bug 工单 / C 取消）
-
-下述两类冲突保护仅适用工具触发类命令（`/sdd-prd-audit` / `/sdd-front-context` / `/sdd-back-context` / `/sdd-frontend-standards` / `/sdd-java-create` / `/sdd-wap-create` / `/sdd-reverse-scan` / `/sdd-test-case` / `/sdd-unit-test`）。
-
-实际有**两类**冲突场景，AI 按场景使用对应模板：
-
-#### 类 1：阶段冲突（last 字段与命令绑定阶段不一致）
-
-```
-【流程冲突提示 — 阶段冲突】
-当前工作流阶段：{last 字段}
-本命令绑定阶段：{绑定阶段}
-冲突点：{具体冲突，如"已在 §3 编码阶段，重审 PRD 可能涉及级联变更"}
-
-请选择处理方式：
-  A. 独立执行（不更新 context.md / index.md / 不触发级联）
-  B. 作为工作流的一部分执行（按命令体内的"动态路由表"决定走哪个 §X.Y 流程）
-  C. 取消
-```
-
-> B 选项的具体路由由命令体定义。例如 `/sdd-prd-audit` 选 B：last 在 §1 → 走 §1 PRD 审计；last 在 §2~§4 → 走 §2.6 Spec Sync。
-
-#### 类 2：产出物冲突（产出文件已存在 / 状态前置不满足）
-
-```
-【流程冲突提示 — 产出物冲突】
-检测到：{具体场景，如 "frontend-context.md 已存在" / "TC-F 文档已存在" / "REQ 不是 approved"}
-
-请选择处理方式：
-  A. {处理方式 1，如"备份后重建" / "强制执行"}
-  B. {处理方式 2，如"独立产出（{时间戳}.md）" / "增量更新"}
-  C. 取消
-```
-
-> 类 2 的具体三选项由各命令体定义（如 sdd-front-context、sdd-back-context、sdd-test-case），与类 1 不同——类 1 关注"何时执行"，类 2 关注"如何处理已有产出"。
-
-> 详细的命令体（产出位置、参数、兜底）见各命令文件 `{SKILL_DIR}/.claude/commands/sdd-*.md`。
+> **详细路由 + 流程冲突保护**：AI 需要决定如何路由 `/sdd-*` 命令时，**Read `{SKILL_DIR}/rules/slash-commands.md`**——含完整路由表（4 流程 + 9 工具）、流程冲突保护两类（阶段冲突 / 产出物冲突）+ 各命令体行为细则。命令体本身见 `{SKILL_DIR}/.claude/commands/sdd-*.md`。
 
 ---
 
-## .project 目录结构
+## .project 目录结构（概览）
 
-```
-项目根目录/
-├── .project/                          ← 项目管理目录
-│   ├── context.md                     ← 每次对话必读，AI 自动维护
-│   ├── task.md                        ← 子任务级进度跟踪
-│   ├── specs/
-│   │   ├── master/
-│   │   │   ├── index.md               ← 模块状态总览
-│   │   │   ├── requirements/
-│   │   │   │   └── REQ-{xx}-{name}.md
-│   │   │   ├── design/
-│   │   │   │   └── DES-{xx}-{name}.md
-│   │   │   └── prototypes/            ← §2.4 原型产出
-│   │   │       └── {xx}-{模块名}/
-│   │   │           ├── *.html         ← HTML 线框图（仅 PRD 无视觉内容时生成）
-│   │   │           └── prototype-spec.md  ← 按页面基准来源表 + 交互流程 + 结构说明
-│   │   ├── change-log-specs.md
-│   │   └── rules/
-│   │       ├── project-profile.md     ← 项目级（铁律/技术栈/外部依赖/业务架构）
-│   │       ├── frontend-context.md    ← 前端规范（context skill 或 fallback 产出）
-│   │       ├── backend-context.md     ← 后端规范（context skill 或 fallback 产出）
-│   │       └── unit-test-base.md      ← [可选]
-│   ├── changelog/
-│   └── reverse-scan/              ← [可选] 深度扫描产出（reverse-scan Skill）
-│       ├── knowledge-cards/       ← 知识卡片（逐文件函数级）
-│       ├── call-graph.md          ← 全局调用关系图
-│       ├── module-map.md          ← 模块地图
-│       ├── db-schema.md           ← 数据库结构
-│       ├── specs/requirements/    ← 已有模块 REQ（逆向，仅供参考）
-│       ├── specs/design/          ← 已有模块 DES（逆向，仅供参考）
-│       ├── profile-patch.md       ← 合并就绪：业务架构 + 业务流程
-│       ├── overview.md            ← 合并就绪：项目全景文档
-│       ├── api-doc.md             ← 合并就绪：全量接口文档
-│       ├── verification-report.md
-│       ├── grey-decisions.md
-│       └── scan-summary.md
-├── .docs/
-│   ├── prd/                           ← PRD 文字需求（md/pdf）
-│   │   ├── prototype/                 ← 原型图（线框图）
-│   │   ├── ui/                        ← UI 设计稿（高保真）
-│   │   └── ui-spec/                   ← UI 解析文件（md 格式）
-│   └── tech/                          ← 技术文档
-├── .test-env.md                           ← 测试运行环境声明（G0.2 自动生成，项目根目录；test-case-design / unit-test-generator 默认查找位置）
-├── .test/                                 ← 测试产出根目录（独立于 .project）
-│   ├── testcases/                         ← §2.7 功能测试用例（test-case-design 产出）
-│   │   ├── TC-F-{xx}-{模块}.md            ← 按模块分文件
-│   │   ├── testcases.detailed.csv         ← 全局汇总（所有模块追加）
-│   │   └── testcases.traditional.csv
-│   └── unit/                              ← §3.7 单元测试（unit-test-generator 产出）
-│       ├── UT-{xx}-{模块}.md              ← 单测用例文档
-│       ├── skeleton/                      ← 单测代码骨架（原件，不删除）
-│       │   ├── *.jest.ts / *.junit.java / ...
-│       │   └── fixtures/*.json
-│       └── report.md                      ← 单元测试执行报告
-├── .outdocs/
-│   ├── project-overview.md
-│   ├── api-doc.md
-│   ├── audit-report.md
-│   ├── unit-test-report.md
-│   ├── task-report.md
-│   └── prd-change-log.md
-└── .agents/skills/                    ← ny-sdd-workflow 安装目录（所有子 Skill 已内置在 tools/ 下）
-```
+| 顶级目录 | 用途 |
+|---|---|
+| `.project/` | 项目管理：`context.md`（每次对话必读）、`task.md`（子任务）、`specs/master/`（REQ/DES/index/prototypes）、`specs/rules/`（profile + context）、`changelog/`、`reverse-scan/`（可选）|
+| `.docs/` | 用户文档：`prd/`（PRD + prototype/ui/ui-spec 子目录）、`tech/`（技术文档）|
+| `.test-env.md` | 测试运行环境（§2.7 / §3.7.1 首次进入时按需生成 + 扫描项目配置补全）|
+| `.test/` | 测试产出：`testcases/`（TC-F + CSV）、`unit/`（UT + skeleton + report）|
+| `.outdocs/` | 交付文档：project-overview / api-doc / audit-report / unit-test-report / task-report / prd-change-log |
+| `.agents/skills/` | ny-sdd-workflow 安装目录（子 Skill 内置在 tools/ 下）|
+
+> **完整树状结构图**（含每个具体文件 + 注释）：**Read `{SKILL_DIR}/rules/project-structure.md`**。AI 日常执行流程不依赖该图（各 phase-*.md 直接给出实际路径），仅在用户询问目录结构或追溯具体路径时按需 Read。
 
 ---
 
@@ -584,10 +655,10 @@ AI 根据用户**首条消息**推断当前意图，**直接执行，不等待�
 | §2.1 | 模块排序 + 子任务拆分 + 写入 `task.md` + 选执行模式（连续/逐个确认） | feature 类型；首次进入 §2 |
 | §2.2 | 需求分析 → REQ 文件（`review-status: draft`）+ REQ 自审 | feature/bug/refactor 分模板 |
 | §2.3 | 方案设计 → DES 文件 + `api-doc.md` 自动追加 + DES 自审 | DES 含 API 时自动写 api-doc |
-| §2.4 | 原型生成 → `prototype-spec.md`（+ HTML 线框图条件性） | 仅 feature 含前端 |
-| §2.5 | 人工评审 → REQ/DES `review-status: approved` | 阻塞，待用户确认 |
+| §2.4 | 原型生成 → `prototype-spec.md`（+ HTML 线框图条件性） | 仅 feature 含前端；**blocking: true**（触发条件满足时必做）；出口产物哈希写入 context.md `produced` |
+| §2.5 | 人工评审 → REQ/DES `review-status: approved` | 阻塞，待用户确认；**blocking: gated**（feature 含前端时强制回灌 §2.4 产物） |
 | §2.6 | Spec Sync（PRD/specs/tech 三种触发源）→ 级联更新 | 横切动作，可在 §1~§4 任意触发 |
-| §2.7 | 调用 test-case-design Skill → TC-F + CSV | 评审通过后；非编码阻断项 |
+| §2.7 | 调用 test-case-design Skill → TC-F + CSV | **blocking: true**（feature/bug/refactor 均执行；Skill 缺失时兜底产出手工 TC-F 大纲，触发 G2 由用户决策）|
 
 ### §3 编码变更通道（rules/phase-coding.md）
 
@@ -597,14 +668,14 @@ AI 根据用户**首条消息**推断当前意图，**直接执行，不等待�
 | §3.1 | 加载规范+铁律（4 子步骤：铁律 / 已有代码 / 编码上下文 / UI 上下文） | — |
 | §3.2 | 加载 Spec（sync-status + coding-skill + audit-skill 状态检查） | — |
 | §3.3 | 文档学习（按需，优先 `.docs/`） | — |
-| §3.4 | 影响面评估（6 维度） | — |
+| §3.4 | 影响面评估（6 维度） | **blocking: true**（产物为对话内影响面清单，produced 字段豁免）|
 | §3.5 | 代码变更（C-01~C-10 + U-01~U-06） | 调用 frontend-code-standards Skill 或 context 文件 |
-| §3.6 | 代码审计（S-01~S-08）→ `audit-report.md` | 内置兜底，详细规则在 quality-standards.md |
-| §3.7 | 自动化单测（unit-test-generator）+ T-01~T-06 自动补充 | 报告 PASS/SKIP/FAIL；产出 `.test/unit/` |
-| §3.8 | 更新 `task.md`（feature 类型，或 refactor 有 task.md 时） | — |
+| §3.6 | 代码审计（S-01~S-08）→ `audit-report.md` | **blocking: audit-required**（审计起手清单 ≥3 怀疑点 + ≥3 finding 或辩护；至少 1 个怀疑点针对 ≥10 行代码段）；**反向假设 8 类速查**：空值 / 并发 / 时序 / 输入 / 异常 / 边界 / 权限 / 状态；锚点首轮 `## {模块编号-模块名} 代码审计报告（YYYY-MM-DD）`，第 N 轮加 `第 N 轮` 后缀；跨多模块 feature 每模块独立锚点；context.md `produced` 必填 |
+| §3.7 | 自动化单测（unit-test-generator）+ T-01~T-06 自动补充 | **blocking: gated**（强制回灌 §3.6 锚点 + finding 列表）；报告 PASS/SKIP/FAIL；产出 `.test/unit/`；锚点首轮 / 第 N 轮规则同 §3.6；context.md `produced` 必填 |
+| §3.8 | 更新 `task.md`（feature 类型，或 refactor 有 task.md 时） | **blocking: gated**（强制回灌 §3.7 锚点 + 结论字段） |
 | §3.9 | 生成 Changelog → `.project/changelog/` | 所有通道 |
 | §3.10 | Spec 状态同步（含 bug 修复回环留痕） | 更新 sync-status / change-log-specs.md |
-| §3.11 | 写入 `context.md`（含 bug 回环路由） | 路由：原始 last 在 §3.x→回原位 / §4→重新归档 |
+| §3.11 | 写入 `context.md`（含 bug 回环路由） | **blocking: true**（产物即 context.md 新记录本身，是状态机锚定点，produced 字段豁免）；路由：原始 last 在 §3.x→回原位 / §4→重新归档 |
 
 ### §4 归档（rules/phase-archive.md）
 
@@ -622,8 +693,11 @@ AI 根据用户**首条消息**推断当前意图，**直接执行，不等待�
 |---|---|---|
 | §3.5 代码变更 | `quality-standards.md` 的 C-01~C-10 | 10 条编码规约逐项核对 |
 | §3.5 前端代码变更 | `quality-standards.md` 的 U-01~U-06 | 6 条 UI 还原规约 |
-| §3.6 代码审计 | `quality-standards.md` 的 S-01~S-08 | 8 条审计规约 + 详细判定标准 |
-| §3.7.2 自动补充验证 | `quality-standards.md` 的 T-01~T-06 | 6 条自测规约 + 执行细节 |
+| §2.4 原型生成（feature 含前端） | `phase-spec.md` §2.4 完整段 | 出口产物 schema（prototype-spec.md 必备二级标题）+ context.md `produced` 字段写法 |
+| §2.5 评审进入 | `phase-spec.md` §2.5「上节产物回灌」段 | gated 回灌格式（cat / shasum / 校验 4 项） |
+| §3.6 代码审计 | `quality-standards.md` 的 S-01~S-08 + `phase-coding.md` §3.6 审计起手清单段 | 8 条审计规约 + 审计起手清单 + 锚点 schema + finding 最低数 |
+| §3.7 开发自测进入 | `phase-coding.md` §3.7「上节产物回灌」段 + `quality-standards.md` T-01~T-06 | gated 回灌格式（grep 锚点 / awk 提取章节 / shasum）+ 6 条自测规约 |
+| §3.8 更新 task.md 进入 | `phase-coding.md` §3.8「上节产物回灌」段 | gated 回灌格式（grep §3.7 锚点 / 结论字段校验） |
 | §2.2 REQ 自审 / §2.3 DES 自审 | `quality-standards.md` 的 REQ/DES 审计标准 | 审计循环上限 / 自审项清单 |
 | §2.6 Spec Sync 级联 | `phase-spec.md` §2.6 完整段 | 5 张级联规则表 / Step 1~6 详细流程 |
 | §3.10 bug 修复回环留痕 | `phase-coding.md` §3.10 完整段 | a~e 5 项留痕动作 + 文档级联 |

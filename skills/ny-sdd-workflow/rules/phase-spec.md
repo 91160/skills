@@ -320,7 +320,16 @@ DES 完成后，从 DES 的 API 定义部分自动提取，以模块章节形式
 > - prev: §2.3 方案设计
 > - next: §2.5 评审
 > - gate: none
-> - blocking: false
+> - blocking: true
+
+> **触发条件**：仅当本次任务类型 = feature **且**涉及前端页面时执行；bug / refactor / 纯后端 feature 跳过本节（不视为流程违规），跳过时在 §2.5 「上节产物回灌」段中标注 `prev=§2.3，本节跳过原因：{bug / refactor / 纯后端 feature}` 即可。一旦触发条件满足，blocking=true，跳过 = 流程错误（违反 G2 路由不确定信号），执行自审会回滚到本节重做。
+
+> **「涉及前端」客观判据（三条满足任一即视为涉及前端，AI 不得自行判定为"纯后端"）**：
+> 1. DES（`.project/specs/master/design/DES-*.md`）含「前端方案」/「UI 设计」/「页面结构」/「组件」/「路由」等章节标题或关键字
+> 2. task.md 当前模块的子任务清单中含「前端」/「页面」/「组件」/「联调」类型条目
+> 3. project-profile.md「技术栈」声明含前端框架（Vue / React / Angular / Svelte / WAP / 小程序 / Flutter Web 等）且本次任务范围未明确限定为"仅后端"
+>
+> 三条均不满足时方可标注"纯后端 feature 跳过"。AI 必须在 §2.5 回灌段中**列出三条判据的检查结果**作为可见凭证。
 
 **产出位置**：`.project/specs/master/prototypes/{模块编号}-{模块名}/`
 
@@ -386,9 +395,25 @@ DES 完成后，从 DES 的 API 定义部分自动提取，以模块章节形式
 - 每个页面一个 HTML 文件
 - prototype-spec.md 的"基准来源"列标注为"HTML 原型"（优先级 4）
 
-**更新 context.md**：prototype-spec.md 生成完成后，追加一条记录 `{日期} {模块名} 原型规格完成（{HTML 已生成 / 跳过 HTML（已有视觉内容）}）— last: §2.4 原型生成（下次进入 §2.5 评审）`。
+**出口产物 schema（强制）**：
 
-> bug / refactor 类型 → 跳过此步，直接进入 §2.5 评审。
+§2.4 完成后必须产出以下文件，§2.5 进入时按 gated 规约回灌校验：
+
+| 产物 | 路径 | 校验点 |
+|---|---|---|
+| 原型规格 | `.project/specs/master/prototypes/{模块编号}-{模块名}/prototype-spec.md` | 文件存在；含 `# {模块编号}-{模块名} 原型规格` 一级标题；含「## 基准来源」「## 交互流程图」「## 页面结构说明」三个二级标题；至少 1 个页面条目 |
+| HTML 线框图（条件性） | `.project/specs/master/prototypes/{模块编号}-{模块名}/*.html` | 仅 PRD 无任何视觉内容时生成；存在时每个页面一个文件 |
+
+**更新 context.md**：prototype-spec.md 生成完成后，追加一条记录：
+
+```
+{日期} {模块名} 原型规格完成（{HTML 已生成 / 跳过 HTML（已有视觉内容）}）— last: §2.4 原型生成（下次进入 §2.5 评审）
+produced: .project/specs/master/prototypes/{模块编号}-{模块名}/prototype-spec.md {SHA-256 前 8 位}
+```
+
+> `produced` 字段为 blocking=true 章节的强制字段（见 AGENTS.md「编号与流程声明规约」第 7 条 + G0.4 状态恢复）。哈希通过 `shasum -a 256 <文件路径> | cut -c1-8` 计算。
+
+> bug / refactor 类型 → 跳过此步，直接进入 §2.5 评审；context.md 不写入 produced 字段，在 §2.5 回灌段中标注跳过原因。
 
 ---
 
@@ -400,7 +425,40 @@ DES 完成后，从 DES 的 API 定义部分自动提取，以模块章节形式
 > - prev: §2.4 原型生成（feature 含前端）/ §2.3 方案设计（bug、refactor 或纯后端 feature）
 > - next: §2.7 功能测试用例设计
 > - gate: none
-> - blocking: true
+> - blocking: gated
+
+**【上节产物回灌】（gated 章节强制，进入 §2.5 时立即输出）**
+
+声明头之后必须立即输出以下回灌段，否则违反凭证，开局自审会回滚到 §2.4 重做：
+
+- **若 prev = §2.4（feature 含前端）**：
+  ```
+  执行 Bash: ls .project/specs/master/prototypes/{模块编号}-{模块名}/prototype-spec.md \
+            && head -30 .project/specs/master/prototypes/{模块编号}-{模块名}/prototype-spec.md \
+            && shasum -a 256 .project/specs/master/prototypes/{模块编号}-{模块名}/prototype-spec.md | cut -c1-8
+  粘贴实际输出：
+  """
+  <工具回显原文，含路径、标题、3 个二级标题、SHA-256 前 8 位>
+  """
+  本节输入承诺：基于上述 prototype-spec.md 中页面清单 [{页面名 1, 页面名 2, ...}] 进行评审，重点核对基准来源准确性与交互流程完整性。
+  ```
+  → 校验：文件存在 + 含 3 个必备二级标题 + 哈希与 context.md `produced` 字段一致。任一不通过 → 回滚 §2.4。
+
+- **若 prev = §2.3（bug / refactor / 纯后端 feature）**：
+  ```
+  本节跳过 §2.4 回灌，原因：{bug / refactor / 纯后端 feature}（任务类型 = {feature/bug/refactor}）
+  
+  「涉及前端」客观判据三条检查结果（feature 类型必填）：
+    1. DES 含前端方案章节？{✅ / ❌ 检查文件：path:line}
+    2. task.md 当前模块子任务含前端 / 页面 / 组件 / 联调？{✅ / ❌ 检查文件：path:line}
+    3. project-profile.md 技术栈含前端框架？{✅ / ❌ 检查文件：path:line}
+  
+  三条均 ❌ → 确认"纯后端"，跳过合法
+  任一 ✅ → 实际涉及前端，跳过 §2.4 视为越界违规，回滚到 §2.4 重做
+  
+  本节输入承诺：基于 REQ + DES 进行评审，无原型规格输入。
+  ```
+  > **双重校验**：bug / refactor 任务类型直接通过判据；feature 任务必须完整填写三条结果。AI 不得简化为"feature 但纯后端"一句话——必须有 path:line 证据。
 
 - 人工确认方案和原型
 - 不通过 → AI 根据反馈修改，重新设计
@@ -418,7 +476,60 @@ DES 完成后，从 DES 的 API 定义部分自动提取，以模块章节形式
 > - prev: §2.5 评审
 > - next: §3.0 通道判断
 > - gate: none
-> - blocking: false
+> - blocking: true
+
+> **blocking=true 理由**：§2.7 产出的 TC-F-*.md 是 §3.6 代码审计 S-08 功能完整性检查的输入。跳过 §2.7 → §3.6 S-08 失效 → 编码完成但场景覆盖未验证。**Skill 缺失场景的兜底**：仍要写入手工 TC-F 大纲（至少列出 P0 场景的预期行为），文件存在但内容简略不视为违规；触发 G2 由用户决定是否真跳过。
+
+**`.test-env.md` 按需生成 + 自动检测**（调用 test-case-design Skill 前必须完成）：
+
+§2.7 是首次消费 `.test-env.md` 的章节，进入时**按以下流程确保配置完整可用**：
+
+1. **检查文件**：`ls .test-env.md`（项目根）
+2. **文件不存在 → 创建 + 自动扫描**：
+   - Read 权威模板：`{SKILL_DIR}/tools/test-case-design/references/test-env-template.md` 的「## 一、完整模板」代码块
+   - 按下方"配置字段检测来源参考表"逐字段扫描项目实际配置
+   - 用真实值替换模板默认值；AI 确实无法检测的字段保留模板默认值并标注 `  # TODO 用户填写`
+   - 写入项目根 `.test-env.md`
+3. **文件已存在 → 检查 TODO 字段**：
+   - `grep '# TODO' .test-env.md`
+   - 有 TODO → 按上方检测表针对仍为 TODO 的字段扫描补全
+4. **vars 类账号字段无法自动检测时**：触发 G2 停车询问用户（详见下方"用户决策路径"）
+
+**配置字段检测来源参考表**：
+
+| 字段类别 | 检测来源 | 示例 |
+|---|---|---|
+| `test_db.type` / `test_db.dsn` | `application.yml` / `application.properties` / `.env` / `docker-compose.yml`；后端 `package.json` 依赖（pg / mysql2 / better-sqlite3 等） | MySQL / PostgreSQL / SQLite |
+| `test_commands.frontend` | 前端 `package.json` 的 `scripts.test`（`pnpm-lock.yaml` → pnpm test；`yarn.lock` → yarn test；否则 npm test）| `npm test` / `pnpm test` / `yarn test` |
+| `test_commands.backend` | `pom.xml` → mvn test；`build.gradle` → gradle test；`go.mod` → go test ./...；`pyproject.toml` / `setup.py` → pytest | `mvn test` / `gradle test` / `go test` |
+| `test_dirs.frontend_unit` | Glob `src/**/__tests__` / `**/*.test.{ts,js}` / `**/*.spec.{ts,js}` 取最常见 | `src/__tests__` / `tests/` |
+| `test_dirs.backend_unit` | Java `src/test/java`；Go 与源码同目录 `*_test.go`；Python `tests/` | `src/test/java` / `tests/` |
+| `base_url.local` | 后端启动配置（`server.port` / `package.json start` 端口）；`.docs/tech/` API 文档 | `http://localhost:8080` |
+| `MCP 能力声明` | 当前 AI 工具能力（Claude Code 通常 `shell`；其他能力按实际 MCP 装载情况） | shell / http-client / sql-runner / playwright |
+| `vars.*` | **AI 不自动填写**（账号密码不应推测）→ 留 TODO，进入"用户决策路径" | — |
+
+**用户决策路径（仅 vars 类字段无法自动检测时触发）**：
+
+```
+【G2 停车 - .test-env.md vars 字段需用户决策】
+已自动检测并填充以下字段：
+  · test_db: {自动填值} ✅
+  · test_commands.frontend/backend: {自动填值} ✅
+  · test_dirs.*: {自动填值} ✅
+  · base_url.local: {自动填值} ✅
+  · MCP 能力声明: {自动填值} ✅
+
+但以下账号类字段 AI 无法自动检测：
+  · vars.test_user / vars.test_password: 需用户填写实际测试账号
+  · 其他 vars.*: ...
+
+请选择：
+  A. 我现在编辑 .test-env.md 填好 vars 后回复"填好了"继续（完整测试模式，推荐）
+  B. 跳过这些字段（涉及登录测试的用例会自动降级为 manual 或被 Skill 跳过）
+  C. 取消本次 §2.7
+```
+
+完成上述按需生成 + 检测后，才进入下方 Skill 调用流程。
 
 **调用 test-case-design Skill**：读取 {SKILL_DIR}/rules/skill-routing.md，按 Skill 执行流程安装并调用。
 
@@ -451,7 +562,7 @@ DES 完成后，从 DES 的 API 定义部分自动提取，以模块章节形式
 - §3.1 编码时加载参考（了解"代码需要支持哪些功能场景"，TDD 思路）
 - §3.6 代码审计 S-08 功能完整性检查（对照 TC 的 P0/P1 场景检查代码是否有对应实现）
 
-**Skill 文件缺失处理**：功能测试用例非编码阻断项，跳过并提示用户后续补充。不触发 G2 停车，直接进入 §3.0。
+**Skill 文件缺失处理**：Skill 缺失时**不直接跳过**——AI 兜底产出**手工 TC-F 大纲**（至少含 P0 场景的预期行为，结构简化版亦可），写入 `.test/testcases/TC-F-{模块}-{功能}.md`，并触发 G2 停车请用户决定（A. 接受简化版继续 / B. 用户补全后继续 / C. 跳过本节，由用户书面确认风险）。任何决策都必须在 context.md 写入 produced（即便简化版亦计为产物）。
 
 **更新 context.md**：产出完成后，追加一条记录 `{日期} {模块名} 功能测试用例设计完成（{N} 条用例）— last: §2.7 功能测试用例设计（下次进入 §3.0 通道判断）`
 
@@ -472,7 +583,7 @@ DES 完成后，从 DES 的 API 定义部分自动提取，以模块章节形式
 > **返回机制**（执行完毕后的回归策略）：
 > 1. AI 读取 `.project/context.md` **倒数第二条记录**（Spec Sync 触发前的最后状态）的 `last` 字段
 > 2. 按该 `last` 字段定位返回的章节，继续原流程
-> 3. 若倒数第二条记录无 `last` 字段（历史数据）→ 询问用户返回哪个阶段
+> 3. 若倒数第二条记录不存在或无 `last` 字段 → 询问用户返回哪个阶段
 > 4. Spec Sync 本次执行的 `last: §2.6` 记录保留在 context.md 末尾作为留痕，不作为下次状态恢复的起点
 
 用户可随时触发 specs 同步。AI 识别触发源后走统一流程。

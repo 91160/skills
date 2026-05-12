@@ -498,6 +498,8 @@ Skill 通过对话上下文接受以下字段：
     3. 在 change-log-specs.md 留痕（触发源 [unit-test]）
 ```
 
+> **锚点格式提醒**：本 Skill 只产出 `.test/unit/report.md`（模块级原始报告）+ skeleton 代码。`.outdocs/unit-test-report.md`（全局汇总）的聚合由 SDD §3.7 的 AI 编排逻辑负责，锚点格式固定为 `## {模块编号-模块名} 开发自测报告（YYYY-MM-DD）`，含「### 自动化单测（§3.7.1 unit-test-generator）」+「### 补充验证（§3.7.2 T-01~T-06）」+ 末尾「结论」行。AI 在 §3.7 完成时还需写入 context.md `produced` 字段（产物路径 + 锚点 + SHA-256 前 8 位），用于 §3.8 进入时回灌校验。详见 phase-coding.md §3.7。
+
 ---
 
 ## 输出回执模板（完整示例）

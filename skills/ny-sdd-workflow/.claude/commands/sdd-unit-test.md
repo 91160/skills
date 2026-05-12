@@ -9,12 +9,16 @@ description: 设计 + 生成 + 执行单元测试（绑定 SDD §3.7.1 自动化
 ## 执行步骤
 
 1. 读取项目根目录 `AGENTS.md`，定位 `{SKILL_DIR}`。不存在 → 提示「请先 `/sdd-init`」并退出。
-2. 读取 `{SKILL_DIR}/rules/skill-routing.md`。
-3. **前置清理**（中断恢复机制）：
+2. **`.test-env.md` 按需生成 + 自动检测**（调用 Skill 前必须完成）：
+   - `ls .test-env.md` → 不存在则按 `phase-spec.md §2.7「.test-env.md 按需生成 + 自动检测」`段流程创建（Read 权威模板 + 扫描项目配置 + 填值）
+   - 存在则 `grep '# TODO' .test-env.md` 检查 TODO 字段 → 有则按检测表补全
+   - vars 类账号字段 AI 无法自动检测时 → 触发 G2 询问用户（详见 §2.7 「用户决策路径」）
+3. 读取 `{SKILL_DIR}/rules/skill-routing.md`。
+4. **前置清理**（中断恢复机制）：
    - 检查测试目录是否存在 `generated/` 临时子目录 → 存在则删除
    - 检查 `.test/unit/report.md` → 结论 PASS 且 generated/ 已清理 → 视为上次已成功，跳过本次执行直接进入 §3.7.2
-4. 读取 `{SKILL_DIR}/tools/unit-test-generator/SKILL.md`，按**自主设计模式**在**当前工作目录**执行。
-5. 输出标准 Skill 执行日志（阶段 / Skill / 路径 / 执行方式）。
+5. 读取 `{SKILL_DIR}/tools/unit-test-generator/SKILL.md`，按**自主设计模式**在**当前工作目录**执行。
+6. 输出标准 Skill 执行日志（阶段 / Skill / 路径 / 执行方式）。
 
 ## SDD 模式参数（自动注入）
 
@@ -65,7 +69,8 @@ description: 设计 + 生成 + 执行单元测试（绑定 SDD §3.7.1 自动化
 4. **清理**：删除 `generated/` 子目录（skeleton/ 原件保留作为归档）
 5. **结果写入**：
    - `.test/unit/report.md`（模块级报告）
-   - `.outdocs/unit-test-report.md`（追加，全局汇总）
+   - `.outdocs/unit-test-report.md`（追加，全局汇总；**锚点格式固定**：`## {模块编号-模块名} 开发自测报告（YYYY-MM-DD）`，含「### 自动化单测（§3.7.1）」+「### 补充验证（§3.7.2）」两个三级标题 + 末尾「结论」行明确为 PASS / SKIP / FAIL；§3.8 进入时按此锚点回灌）
+   - `.project/context.md` 追加一条记录 + `produced: .outdocs/unit-test-report.md#{锚点-slug} {SHA-256 前 8 位}`（gated 章节强制）
 
 ## 降级处理（统一出口）
 
