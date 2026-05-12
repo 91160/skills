@@ -5,6 +5,7 @@ const path = require('path')
 
 const VERSION = '1.0.2'
 const AGENTS_FILE = path.resolve('AGENTS.md')
+const CLAUDE_FILE = path.resolve('CLAUDE.md')
 const TEMPLATE = path.join(__dirname, '..', 'templates', 'AGENTS.md')
 const SKILL_PKG_DIR = path.join(__dirname, '..')
 
@@ -232,11 +233,33 @@ function init() {
     console.log(green('  ✅ AGENTS.md') + gray(` (~170行核心规则，引用 ${skillDir}/rules/)`))
   }
 
-  // 3. 验证 rules/ 文件完整性
+  // 3. CLAUDE.md 自动生成（symlink → AGENTS.md，Windows 用复制兜底）
+  {
+    const isWindows = process.platform === 'win32'
+    if (fs.existsSync(CLAUDE_FILE)) {
+      const stat = fs.lstatSync(CLAUDE_FILE)
+      if (stat.isSymbolicLink()) {
+        console.log(gray('  ⏭  CLAUDE.md (已是 symlink)'))
+      } else {
+        console.log(yellow('  ⚠  CLAUDE.md 已存在且非 symlink，跳过') + gray('（避免覆盖用户自定义内容）'))
+      }
+    } else {
+      if (isWindows) {
+        fs.copyFileSync(AGENTS_FILE, CLAUDE_FILE)
+        console.log(green('  ✅ CLAUDE.md') + gray(' (复制自 AGENTS.md)'))
+      } else {
+        fs.symlinkSync('AGENTS.md', CLAUDE_FILE)
+        console.log(green('  ✅ CLAUDE.md') + gray(' → AGENTS.md (symlink)'))
+      }
+    }
+  }
+
+  // 4. 验证 rules/ 文件完整性
   console.log('')
   const ruleFiles = [
     'rules/phase-init.md', 'rules/phase-spec.md', 'rules/phase-coding.md',
     'rules/phase-archive.md', 'rules/quality-standards.md', 'rules/skill-routing.md',
+    'rules/slash-commands.md', 'rules/project-structure.md',
   ]
   const templateFiles = [
     'templates/project-profile.tpl.md', 'templates/project-overview.tpl.md',
@@ -254,7 +277,7 @@ function init() {
     console.log(green(`  ✅ ${skillDir}/templates/`) + gray(` (${templateFiles.length} 个模板)`))
   }
 
-  // 4. AI 工具同步
+  // 5. AI 工具同步
   console.log('')
   console.log(bold('  AI 工具同步\n'))
 
@@ -310,7 +333,7 @@ function init() {
     console.log(gray('  ⏭  跳过工具同步，仅 AGENTS.md 生效'))
   }
 
-  // 5. .gitignore 建议
+  // 6. .gitignore 建议
   if (createdCount > 0) {
     console.log('')
     console.log(bold('  .gitignore 建议：\n'))
@@ -320,18 +343,19 @@ function init() {
     console.log(gray('  .windsurfrules'))
   }
 
-  // 6. 完成
+  // 7. 完成
   console.log('')
   console.log(green(bold('  ✅ 初始化完成！\n')))
   console.log(bold('  架构：'))
   console.log(`  · AGENTS.md             ~170行核心规则（始终加载）`)
+  console.log(gray(`  · CLAUDE.md             symlink → AGENTS.md（Claude Code 自动读取）`))
   console.log(`  · ${skillDir}/rules/    阶段规则（按需加载）`)
   console.log(`  · ${skillDir}/templates/ 初始化模板（仅首次使用）`)
   console.log('')
   console.log(gray('  AI 每次对话只读取当前阶段的规则，不再一次性加载全部 1500 行'))
   console.log('')
 
-  // 7. Slash Commands 安装（按 --commands 参数处理）
+  // 8. Slash Commands 安装（按 --commands 参数处理）
   console.log('')
   const commandsArg = parseCommandsArg()
   if (commandsArg === 'user' || commandsArg === 'project') {
@@ -385,6 +409,11 @@ function update() {
         fs.copyFileSync(AGENTS_FILE, targetPath)
         console.log(green(`  ✅ ${targetPath}`) + gray(` (${tool})`))
       }
+    }
+    // CLAUDE.md 重新复制（Windows 无 symlink，需手动同步）
+    if (fs.existsSync(CLAUDE_FILE)) {
+      fs.copyFileSync(AGENTS_FILE, CLAUDE_FILE)
+      console.log(green('  ✅ CLAUDE.md') + gray(' (重新复制)'))
     }
   } else {
     console.log(gray('  symlink 自动指向新内容'))
@@ -454,6 +483,16 @@ function remove() {
   }
 
   console.log('')
+  // CLAUDE.md 清理
+  if (fs.existsSync(CLAUDE_FILE)) {
+    const stat = fs.lstatSync(CLAUDE_FILE)
+    if (stat.isSymbolicLink()) {
+      fs.unlinkSync(CLAUDE_FILE)
+      console.log(green('  🗑  CLAUDE.md (symlink 已移除)'))
+    } else {
+      console.log(gray('  CLAUDE.md 保留（非 symlink，可能为用户自定义内容）'))
+    }
+  }
   console.log(gray('  AGENTS.md 保留'))
   console.log(green(bold('\n  ✅ 清理完成！\n')))
 }
@@ -469,6 +508,17 @@ function status() {
     console.log(green('  ✅ AGENTS.md') + gray(' (存在)'))
   } else {
     console.log(yellow('  ❌ AGENTS.md') + gray(' (不存在，请先 init)'))
+  }
+
+  if (fs.existsSync(CLAUDE_FILE)) {
+    const stat = fs.lstatSync(CLAUDE_FILE)
+    if (stat.isSymbolicLink()) {
+      console.log(green('  ✅ CLAUDE.md') + gray(' → AGENTS.md (symlink)'))
+    } else {
+      console.log(yellow('  ⚠  CLAUDE.md') + gray(' (非 symlink，可能为用户自定义内容）'))
+    }
+  } else {
+    console.log(yellow('  ❌ CLAUDE.md') + gray(' (不存在)'))
   }
 
   console.log('')
@@ -546,7 +596,7 @@ switch (command) {
     printBanner()
     console.log(bold('  用法：') + 'node <SDD_DIR>/bin/cli.js <command> [options]\n')
     console.log(bold('  命令：'))
-    console.log('    init      初始化（生成 AGENTS.md + 创建各工具 symlink + 可选安装 slash commands）')
+    console.log('    init      初始化（生成 AGENTS.md + CLAUDE.md (symlink) + 创建各工具 symlink + 可选安装 slash commands）')
     console.log('    update    更新 AGENTS.md 到最新版本（symlink 自动同步；可选强制重装 commands）')
     console.log('    status    查看当前安装状态（含 slash commands 用户级/项目级）')
     console.log('    remove    清理 symlink（保留 AGENTS.md；默认仅清项目级 commands）')

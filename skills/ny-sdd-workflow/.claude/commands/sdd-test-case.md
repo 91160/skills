@@ -9,9 +9,13 @@ description: 为已通过评审的需求生成功能测试用例集（绑定 SDD
 ## 执行步骤
 
 1. 读取项目根目录 `AGENTS.md`，定位 `{SKILL_DIR}`。不存在 → 提示「请先 `/sdd-init` 并完成 §2.5 评审」并退出。
-2. 读取 `{SKILL_DIR}/rules/skill-routing.md`。
-3. 读取 `{SKILL_DIR}/tools/test-case-design/SKILL.md`，按其规范在**当前工作目录**执行。
-4. 输出标准 Skill 执行日志（阶段 / Skill / 路径 / 执行方式）。
+2. **`.test-env.md` 按需生成 + 自动检测**（调用 Skill 前必须完成）：
+   - `ls .test-env.md` → 不存在则按 `phase-spec.md §2.7「.test-env.md 按需生成 + 自动检测」`段流程创建（Read 权威模板 + 扫描项目配置 + 填值）
+   - 存在则 `grep '# TODO' .test-env.md` 检查 TODO 字段 → 有则按检测表补全
+   - vars 类账号字段 AI 无法自动检测时 → 触发 G2 询问用户（详见 §2.7 「用户决策路径」）
+3. 读取 `{SKILL_DIR}/rules/skill-routing.md`。
+4. 读取 `{SKILL_DIR}/tools/test-case-design/SKILL.md`，按其规范在**当前工作目录**执行。
+5. 输出标准 Skill 执行日志（阶段 / Skill / 路径 / 执行方式）。
 
 ## SDD 模式参数（自动注入）
 

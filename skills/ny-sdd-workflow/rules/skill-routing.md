@@ -112,9 +112,11 @@
 
 ---
 
-## Slash Commands 入口表
+## Slash Commands 入口表（Skill 视角）
 
 用户可通过 slash 命令显式触发本工作流的关键流程；命令文件位于 `{SKILL_DIR}/.claude/commands/`，由 `/sdd-init` 安装到用户级（`~/.claude/commands/`）或项目级（`.claude/commands/`）。AI 在用户调用命令时按本表路由，路由动作仍走本文件「Skill 执行流程」与「匹配规则」。
+
+> **命令路由视角的完整规则 + 流程冲突保护**：详见 `{SKILL_DIR}/rules/slash-commands.md`（含 4 流程触发 + 9 工具触发详细路由、阶段冲突 / 产出物冲突两类模板）。本表侧重 **Skill 角度**（含兜底链路）；slash-commands.md 侧重 **命令路由 + 冲突保护**——两表互补。
 
 ### 流程触发类（4 个）
 
