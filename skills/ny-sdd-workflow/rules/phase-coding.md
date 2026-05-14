@@ -810,7 +810,10 @@ produced: .outdocs/unit-test-report.md#{锚点-slug} {SHA-256 前 8 位}
 - 更新 task.md 模块总览表的计数
 - 检查当前模块是否还有 pending 子任务：
   - 有 → 回到 G1 门禁自检，自动定位下一个子任务，继续编码循环
-  - 无 → 继续 §3.9，进入归档
+  - 无 → **进入 §3.9 前执行跨模块归档门禁**：
+    - 读取 context.md，检查上一 dev-order 模块是否已有 `§4 归档` 记录
+    - 无归档记录（last 不含 `§4 归档`）且当前非首模块 → ⚠️ 上一模块未归档！立即执行上一模块的 §4 归档流程（加载 `{SKILL_DIR}/rules/phase-archive.md`），**但仅执行 15 点检查 + 归档通用动作（标签/摘要/context.md），跳过「§4 归档后路由」**，完成后回到当前模块 §3.9
+    - 有归档记录 / 当前为首个模块 → ✓ 继续 §3.9
 
 ---
 
@@ -900,7 +903,37 @@ produced: .outdocs/unit-test-report.md#{锚点-slug} {SHA-256 前 8 位}
 - **last**: §3.11 写入 context.md（下次进入 §4 归档）
 ```
 
-完成后 → 进入 {SKILL_DIR}/rules/phase-archive.md（§4 归档）。
+---
+
+## §3.11 → §4 强制过渡
+
+> **流程声明**
+> - phase: coding
+> - step: 11/11（过渡）
+> - blocking: true
+> - gate: none
+> - prev: §3.11 写入 context.md
+> - next: §4 归档（加载 {SKILL_DIR}/rules/phase-archive.md）
+
+context.md 写入完毕后，AI **必须立即**读取 `{SKILL_DIR}/rules/phase-archive.md` 并执行完整 §4 归档流程。
+
+**防跳过约束**：以下任何行为视为违规，后续 G0.4 开局自审时会因为 context.md `last` 不是 `§4 归档` 而判定跳过 blocking 章节，回滚重做：
+
+- ❌ 输出"接下来该干什么"或类似选项列表
+- ❌ 输出"当前所有模块已完成"总结
+- ❌ 直接开始下一模块的 §3.1 编码
+- ❌ 询问用户下一步做什么
+- ❌ 在未执行 §4 归档前进行任何其他操作
+
+**唯一正确路径**：
+1. ✅ context.md 已写入（last: §3.11 写入 context.md）
+2. ✅ 立即输出 §4 流程声明头
+3. ✅ 逐项执行 15 点归档检查
+4. ✅ 归档通过后按执行模式路由到下一模块或 E2E 确认
+
+> 本过渡块仅适用于**正常开发**路径。Bug 修复回环的路由规则见下方。
+
+---
 
 **Bug 修复回环**（从 G0.4.1 二次判定进入 §3.0 的当前需求 bug）：
 
