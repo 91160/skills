@@ -3,7 +3,7 @@ name: unit-test-generator
 description: >
   单元测试全链路工具：支持两种工作模式。
   翻译模式：从 TC 测试用例文档（含 tc-exec 执行契约的 Markdown）派生完整可跑的单元测试代码。
-  自主��计模式（SDD 集成）：从 REQ/DES + 实际源代码直接设计单测用例 + 生成代码 + 执行 + 输出报告。
+  自主设计模式（SDD 集成）：从 REQ/DES + 实际源代码直接设计单测用例 + 生成代码 + 执行 + 输出报告。
   输出对应框架的单测文件，含 import、describe/test、请求代码、断言、setup/cleanup、fixture。
   支持 Jest / Vitest / JUnit5 / pytest / go test 五种主流框架；支持 inline/external/auto 三种 fixture 策略。
   SDD 模式下自动从 project-profile.md 推断框架，全栈项目一次调用同时生成前后端单测，exec_mode=true 自动执行并输出 report.md。
@@ -16,7 +16,7 @@ description: >
     1. 已有 TC 文档（任何来源），想快速获得可跑单测代码
     2. 测试栈迁移：把一批现有用例从 Jest 迁到 Vitest、从 JUnit4 迁到 JUnit5
     3. 批量生成单测骨架：从一个 TC 文档一次性派生十几个测试文件
-    4. 作为更大工作流的子环节：SDD §2.5 Step 2.5、CI 流水线的一部分、QA 平台集成
+    4. 作为更大工作流的子环节：SDD §3.7.1 自动化单测、CI 流水线的一部分、QA 平台集成
 
   中文触发词：生成单元测试、派生单测、从 TC 生成单测、把测试用例变成代码、
     生成 Jest 测试、生成 JUnit 测试、生成 pytest 测试、生成 go test、
@@ -36,11 +36,11 @@ description: >
 
 **核心定位**：**独立工具**。只要你给我一份带 tc-exec 块的 TC 文档 + 告诉我用什么框架，我就能产出可直接跑的测试文件。
 
-**和 `test-case-design` Skill 的关系**：
-- test-case-design 生成 TC 文档（设计层，"测什么"）
-- unit-test-generator 消费 TC 文档生成单测代码（执行层，"怎么写"）
-- 两个 Skill 独立使用，通过 `tc-exec-schema.md` 共享契约
-- **消费不等于依赖**：本 Skill 也能读取人工手写的 TC 文档（只要符合 tc-exec 格式）
+**和 `test-case-design` / E2E 的关系**：
+- test-case-design 生成 TC-F 功能测试文档（e2e/visual/manual，供 §4 E2E 和 QA 使用）
+- unit-test-generator 自主设计 UT-* 单测用例，或消费人工提供的 tc-exec 文档生成单测代码
+- 两个 Skill 独立使用，不共享 TC-F 契约
+- **消费不等于依赖**：本 Skill 仍能读取人工手写的 TC 文档（只要符合 tc-exec 格式）
 
 ---
 
@@ -104,7 +104,7 @@ description: >
 - 收到用户要求生成某种测试代码时，判断 channel 是否在可生成列表内
 - `channel=ui-visual` / `manual` 的用例**永远跳过**，在回执中明确标注"跳过原因"
 - `channel=ui-dom` 默认不生成（除非用户显式 `channels_filter` 包含）
-- 遇到 `channel=api/db` 时，若 `.test-env.md` 没有配置真实服务，**自动降级**到 in-memory / supertest 模式
+- 遇到 `channel=api/db` 时，若 `.test/.test-env.md` 没有配置真实服务，**自动降级**到 in-memory / supertest 模式
 
 ---
 
@@ -167,7 +167,7 @@ Skill 通过对话上下文接受以下字段：
 | `tc_source` | 翻译模式**必需** / 自主设计模式可选 | TC 文件路径 或 完整 Markdown 文本 | 翻译模式停止并提示；自主设计模式从 REQ/DES + 源代码自动设计 |
 | `framework_hint` | 翻译模式**必需** / SDD 模式可选 | `jest` / `vitest` / `junit5` / `pytest` / `gotest` | SDD 模式自动从 project-profile.md 技术栈推断；翻译模式交互式询问 |
 | `output_dir` | **必需** | 目录路径 | SDD 模式默认 `.test/unit/`，独立模式交互式询问 |
-| `runtime_source` | 可选 | `.test-env.md` 路径 | 按项目根默认查找；仍不存在则 in-memory DB + mock server 降级 |
+| `runtime_source` | 可选 | `.test/.test-env.md` 路径 | 默认查找 `.test/.test-env.md`；仍不存在则 in-memory DB + mock server 降级 |
 | `channels_filter` | 可选 | channel 列表 | 翻译模式默认 `["unit"]`；SDD 自主设计模式默认 `["unit","api","db"]` |
 | `fixture_strategy` | 可选 | `auto` / `inline` / `external` / `hybrid` | 默认 `auto`（按字段数 + 复用度自动判定） |
 | `exec_mode` | 可选 | `true` / `false` | SDD 模式默认 `true`（执行测试 + 输出 report.md）；翻译模式默认 `false`（仅生成代码） |
@@ -350,7 +350,7 @@ Skill 通过对话上下文接受以下字段：
 1. **解析 framework_hint**：
    - 值在 5 个固定枚举内（`jest` / `vitest` / `junit5` / `pytest` / `gotest`）
    - 不在枚举内 → 停止并提示支持的框架
-2. **读 `.test-env.md`**（若存在）：
+2. **读 `.test/.test-env.md`**（若存在）：
    - 解析 `test_db` / `test_dirs` / `vars`（详见 tc-exec-schema.md 第七章"变量引用"）
    - 文件不存在 → 不阻断，继续使用 in-memory DB 降级
 3. **确定 fixture 策略**（详见 `references/fixture-strategies.md`）：
@@ -366,7 +366,7 @@ Skill 通过对话上下文接受以下字段：
 ```
 【Step 2 配置】
   目标框架: {framework}
-  运行环境: {.test-env.md 已加载 / 使用 in-memory 降级}
+  运行环境: {.test/.test-env.md 已加载 / 使用 in-memory 降级}
   fixture 策略: {auto / inline / external}
   待派生用例: {N} 条 (按 channels_filter 筛选后)
   跳过: {N} 条 (channel 不在 filter 内或是 ui-visual/manual)
@@ -420,8 +420,8 @@ Skill 通过对话上下文接受以下字段：
    - external 策略 → 生成 `{output_dir}/skeleton/fixtures/{TC-ID}.json` + 代码中加载
 
 4. **变量展开**：
-   - tc-exec 中的 `${env.xxx}` → 从 `.test-env.md` 查到实际值替换
-   - `.test-env.md` 缺失 → 保留 `${env.xxx}` 占位 + 回执中提示
+   - tc-exec 中的 `${env.xxx}` → 从 `.test/.test-env.md` 查到实际值替换
+   - `.test/.test-env.md` 缺失 → 保留 `${env.xxx}` 占位 + 回执中提示
 
 5. **文件命名**：
    - `{output_dir}/skeleton/{TC-ID}.{framework}.{ext}`
@@ -467,9 +467,10 @@ Skill 通过对话上下文接受以下字段：
       · TC-login-001.json (external 策略)
       · ...
     - Inline fixture 数: {I} 条用例
+    - 模块级执行报告: {output_dir}/report.md （exec_mode=true 时必出；末尾「结论」行为 PASS / SKIP / FAIL）
   
   fixture 策略: auto (inline: {I} / external: {F})
-  runtime 配置: {.test-env.md 已加载 / in-memory 降级}
+  runtime 配置: {.test/.test-env.md 已加载 / in-memory 降级}
   
   依赖提示:
     请确保项目已安装以下依赖才能跑通生成的单测：
@@ -492,8 +493,12 @@ Skill 通过对话上下文接受以下字段：
 ```
 【SDD 集成提示】
   本次运行检测到 SDD 工作流（.project/specs/master/ 存在）
+  报告产出（两份，缺一会导致 §4 归档 #2/#15 校验失败）:
+    · 本 Skill 直接产出: .test/unit/report.md（模块级原始报告，§4 #15 校验源）
+    · 由 SDD §3.7 AI 编排聚合: .outdocs/unit-test-report.md（全局汇总 + 锚点 + produced，§4 #2 校验源）
+      —— 本 Skill 不写 .outdocs/unit-test-report.md，聚合规则见下方「锚点格式提醒」与 phase-coding.md §3.7
   建议后续动作:
-    1. 迁移 skeleton/ 下文件到项目源码树（参考 SDD §2.5 Step 5）
+    1. 迁移 skeleton/ 下文件到项目测试目录（SDD §3.7.1 骨架迁移）
     2. 更新 index.md 的 test-case-status 列
     3. 在 change-log-specs.md 留痕（触发源 [unit-test]）
 ```
@@ -527,7 +532,7 @@ Skill 通过对话上下文接受以下字段：
     - Inline fixture 数: 9 条用例 (≤5 字段，内联)
   
   fixture 策略: auto (inline: 9 / external: 3)
-  runtime 配置: .test-env.md 已加载
+  runtime 配置: .test/.test-env.md 已加载
   
   依赖提示:
     请确保项目已安装：
@@ -542,7 +547,7 @@ Skill 通过对话上下文接受以下字段：
     3. 运行 npm test 验证
     
   提示:
-    - 若单测失败，检查 tc-exec 块的变量引用是否在 .test-env.md 中都有定义
+    - 若单测失败，检查 tc-exec 块的变量引用是否在 .test/.test-env.md 中都有定义
     - 若需派生 channel=cli 或 ui-dom 的测试代码，调用时传 channels_filter: ["unit","api","db","cli","ui-dom"]
 ```
 
@@ -554,7 +559,7 @@ SDD 集成模式下，追加标准 Skill 执行日志：
 
 ```
 【Skill 执行日志】
-  阶段: §2.5 Step 2.5 单测派生
+  阶段: §3.7.1 自动化单测
   Skill: unit-test-generator
   路径: {SKILL_DIR}/tools/unit-test-generator/
   执行: 调用 Skill / 内置兜底
@@ -567,7 +572,7 @@ SDD 集成模式下，追加标准 Skill 执行日志：
 
 1. **完全独立使用**：本 Skill 不依赖 `test-case-design` 或任何其他 Skill。只要 TC 文档符合 `tc-exec-schema` 规范，就能工作。这包括人工手写的 TC、其他 Skill 产出的 TC、历史项目中积累的 TC。
 
-2. **tc-exec-schema 是共享契约**：本 Skill 和 `test-case-design` 都有一份 `tc-exec-schema.md` 副本（见 `references/tc-exec-schema.md`）。两边同步维护，升级 15 操作符或 7 channel 时要**双份更新**。
+2. **tc-exec-schema 是本 Skill 的单测派生契约**：见 `references/tc-exec-schema.md`。它不再是 `test-case-design` 的 TC-F 契约；TC-F 的 E2E 契约由 `test-case-design/references/e2e-exec-schema.md` 定义。
 
 3. **不做测试用例设计**：本 Skill 只做"代码翻译"，不做"用例设计"。输入的 TC 文档必须已经经过测试工程师或 test-case-design Skill 的设计。如果你给我一份空白 Markdown 说"帮我生成测试"，我会拒绝。
 
@@ -580,11 +585,11 @@ SDD 集成模式下，追加标准 Skill 执行日志：
    - B. 手工按照 15 操作符映射关系翻译
    - C. 先转用上述 5 个框架之一
 
-7. **变量展开失败时**：tc-exec 中的 `${env.xxx}` 变量在 `.test-env.md` 中找不到时，Skill 保留原始占位符 + 在回执中列出未解析变量清单。用户可选择忽略或补充 `.test-env.md` 后重跑。
+7. **变量展开失败时**：tc-exec 中的 `${env.xxx}` 变量在 `.test/.test-env.md` 中找不到时，Skill 保留原始占位符 + 在回执中列出未解析变量清单。用户可选择忽略或补充 `.test/.test-env.md` 后重跑。
 
 8. **fixture 生成**：auto 策略下，字段数 ≤5 内联、>5 外联。如果你觉得判定不符合需求，用 `fixture_strategy: inline` 或 `external` 强制覆盖。
 
-9. **channel=api 的降级为 channel=unit**：如果 `.test-env.md` 没有 `base_url` 或 MCP `http-client` 能力，channel=api 的单测会自动降级用 `supertest(app)` / `httptest` 等"进程内注入"方式。这需要项目代码里能 import 被测的 app/handler 实例。
+9. **channel=api 的降级为 channel=unit**：如果 `.test/.test-env.md` 没有 `base_url` 或 MCP `http-client` 能力，channel=api 的单测会自动降级用 `supertest(app)` / `httptest` 等"进程内注入"方式。这需要项目代码里能 import 被测的 app/handler 实例。
 
 10. **重复执行**：多次对同一 TC 文档运行本 Skill 是**幂等**的——除非 TC 文档本身变了，否则生成的骨架代码内容一致。可以安全地在 CI 流水线或 pre-commit hook 里自动运行。
 
@@ -600,10 +605,9 @@ SDD 集成模式下，追加标准 Skill 执行日志：
 | `references/framework-adapters.md` | Step 4（按框架翻译代码） |
 | `references/fixture-strategies.md` | Step 2（确定策略）+ Step 4（生成 fixture） |
 
-**共享契约同步注意**：
-- `references/tc-exec-schema.md` 是从 `test-case-design` Skill 复制的副本（方案 A）
-- 两边的文件必须保持一致
-- 任何对 15 操作符、7 channel、tc-exec 格式的修改都要**同时更新两个 Skill**
+**契约边界**：
+- `references/tc-exec-schema.md` 仅供本 Skill 解析 / 生成 UT-* 单测用例使用
+- `test-case-design` 的 TC-F E2E 契约是 `e2e-exec`，不使用本文件
 
 ---
 

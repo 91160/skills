@@ -20,7 +20,7 @@
 | 值 | 行为 |
 |---|---|
 | `detailed`（默认） | 只产出 12 列详细版 → `testcases.detailed.csv` |
-| `traditional` | 只产出 7 列传统版 → `testcases.detailed.csv` |
+| `traditional` | 只产出 7 列传统版 → `testcases.traditional.csv` |
 | `both` | 同时产出两份 → `testcases.detailed.csv`（detailed）+ `testcases.traditional.csv` |
 
 **`csv_headers_lang` 与模板的交互**：
@@ -60,7 +60,7 @@
 | 3 | `Title` | ✅ | string | 200 | `正常登录 - 返回 token` | 一句话用例名 |
 | 4 | `Priority` | ✅ | enum | 2 | `P0` / `P1` / `P2` | 优先级 |
 | 5 | `Type` | ✅ | enum | 16 | `业务流程测试` / `UI交互测试` / `视觉回归测试` / `异常边界测试` | 4 章分类 |
-| 6 | `Channel` | ✅ | enum | 12 | `manual` / `ui-dom` / `ui-visual` | 功能测试层通道（3 个） |
+| 6 | `Channel` | ✅ | enum | 12 | `e2e` / `visual` / `manual` | 功能测试层通道（3 个） |
 | 7 | `Preconditions` | ⬜ | string | 500 | `数据库有 zhangsan 用户; 清空 session` | 前置条件 |
 | 8 | `Test_Steps` | ✅ | string | 1000 | `1) 发送 POST 请求 ; 2) 传入合法凭据 ; 3) 检查响应` | 测试步骤，方案 C 编号+分号格式 |
 | 9 | `Expected_Result` | ✅ | string | 500 | `1) HTTP 200 ; 2) 返回 token ; 3) 跳转首页` | 预期结果，同步骤格式 |
@@ -72,7 +72,7 @@
 
 | 砍掉列 | 原因 | 替代方案 |
 |---|---|---|
-| `Exec_Mode` | 可从 `Channel` 推断（ui-visual/manual → manual，其他 → auto） | 工具侧推断 |
+| `Exec_Mode` | 可从 `Channel` 推断（e2e → auto，visual → visual，manual → manual） | 工具侧推断 |
 | `Methodology` | QA 工具基本不用，TC 文档头部覆盖率矩阵已记录 | 看 TC 文档 |
 | `Test_Data` | 合并到 `Test_Steps` 的具体步骤描述中 | 合并 |
 | `Related_DES` | `Related_REQ` 已提供追溯起点，DES 可从 REQ 关联找到 | 省略 |
@@ -194,8 +194,8 @@
 
 ```csv
 TC_ID,Module,Title,Priority,Type,Channel,Preconditions,Test_Steps,Expected_Result,Related_REQ,Skeleton_File,Generated_Date
-TC-F-login-001,01-登录,正常登录流程,P0,业务流程测试,manual,数据库有 zhangsan 用户,1) 打开登录页 ; 2) 输入用户名 zhangsan 和密码 ; 3) 点击登录按钮 ; 4) 等待跳转,1) 跳转到首页 ; 2) 显示用户名 zhangsan ; 3) 页面无报错,REQ §2.1,,2026-04-17
-TC-F-login-002,01-登录,登录页表单提交,P1,UI交互测试,ui-dom,登录页正常加载,1) 点击用户名输入框 ; 2) 输入文本 ; 3) Tab 切换到密码框 ; 4) 点击登录按钮,1) 输入框获焦高亮 ; 2) Tab 切换正常 ; 3) 按钮响应点击,REQ §2.1,,2026-04-17
+TC-F-login-001,01-登录,正常登录流程,P0,业务流程测试,e2e,数据库有 zhangsan 用户,1) 打开登录页 ; 2) 输入用户名 zhangsan 和密码 ; 3) 点击登录按钮 ; 4) 等待跳转,1) 跳转到首页 ; 2) 显示用户名 zhangsan ; 3) 页面无报错,REQ §2.1,,2026-04-17
+TC-F-login-002,01-登录,登录页表单提交,P1,UI交互测试,e2e,登录页正常加载,1) 点击用户名输入框 ; 2) 输入文本 ; 3) Tab 切换到密码框 ; 4) 点击登录按钮,1) 输入框获焦高亮 ; 2) Tab 切换正常 ; 3) 按钮响应点击,REQ §2.1,,2026-04-17
 TC-F-login-003,01-登录,密码错误提示,P0,异常边界测试,manual,数据库有 zhangsan 用户,1) 输入正确用户名和错误密码 ; 2) 点击登录,1) 提示"用户名或密码错误" ; 2) 不跳转 ; 3) 密码框清空,REQ §2.2,,2026-04-17
 ```
 
@@ -288,13 +288,11 @@ CSV 不是从 TC-xx.md 反解析生成的。两个文件都是从 Skill 的 **St
 ```
 Step 3 输出: 用例蓝本列表（对象数组）
   ↓
-Step 4 (tc-exec 编写) - 丰富蓝本对象
+Step 4 (e2e-exec / 测试说明编写) - 丰富蓝本对象
   ↓
 Step 5 (自审) - 校验蓝本对象
   ↓
-Step 6 (单测派生) - 回填 skeleton_file 字段
-  ↓
-Step 7 (组装):
+Step 6 (组装):
   ├─ 组装 TC-xx.md (按 tc-doc-template.md 的 9 步骨架)
   └─ 组装 testcases.csv (按本文件的 12 列 Schema 从蓝本投影)
 ```
@@ -315,7 +313,7 @@ Step 7 (组装):
 | Test_Steps | `steps[]` | 数组 → 方案 C 格式 |
 | Expected_Result | `expectations[]` | 断言 bullet → 方案 C 格式 |
 | Related_REQ | `req_ref` / `req_refs[]` | 字符串或数组 → `;` 分隔 |
-| Skeleton_File | `skeleton_file` | Step 6 回填，可能为空 |
+| Skeleton_File | `skeleton_file` | 预留给 unit-test-generator，默认空 |
 | Generated_Date | 当前日期 | Skill 生成时填入 |
 
 ---
@@ -345,7 +343,7 @@ Skill Step 6 生成 detailed CSV 后必须自检：
 5. [ ] 所有字段遵守 RFC 4180 引用规则
 6. [ ] `Priority` 字段值在 {P0, P1, P2}
 7. [ ] `Type` 字段值在 4 个章节枚举内（业务流程测试/UI交互测试/视觉回归测试/异常边界测试）
-8. [ ] `Channel` 字段值在 3 个通道枚举内（manual/ui-dom/ui-visual）
+8. [ ] `Channel` 字段值在 3 个通道枚举内（e2e/visual/manual）
 9. [ ] `TC_ID` 格式符合 `TC-F-{module_id}-{seq:03}`
 10. [ ] `Test_Steps` / `Expected_Result` 使用方案 C 格式（含编号 + ` ; `）
 11. [ ] 行数 = 用例数 + 1（表头）
@@ -385,7 +383,7 @@ Skill Step 6 生成 detailed CSV 后必须自检：
 | 砍掉的列 | 原因 |
 |---|---|
 | `Type` | 章节已在 TC 文档里分好，CSV 里冗余 |
-| `Channel` | 传统 QA 不关心执行通道（是 api 还是 ui-dom） |
+| `Channel` | 传统 QA 不关心执行通道（是 e2e 还是 manual） |
 | `Related_REQ` | 传统 QA 用需求管理系统独立跟踪 |
 | `Skeleton_File` | 传统 QA 不管 dev 的单测文件 |
 | `Generated_Date` | 传统 QA 用"创建日期"字段，通常由管理平台自动填 |
@@ -420,7 +418,7 @@ TC-F-login-001,P0,01-Login,Normal Login - Return Token,1) DB has zhangsan user ;
 | `执行步骤` | `Test_Steps` | `steps[]` | 数组 → 方案 C 格式 |
 | `预期结果` | `Expected_Result` | `expectations[]` | 断言 bullet → 方案 C 格式 |
 
-**说明**：`expectations[]` 是从 tc-exec 块的断言 bullet 中**语义化翻译**而来——不是直接把 `http.status == 401` 这种 DSL 塞进去，而是转成 `1) HTTP 状态码 401`、`2) 响应体 code=10001` 这种人类可读的预期描述。
+**说明**：`expectations[]` 来自用例的"预期结果"；`channel=e2e` 时必须与 `e2e-exec.assertions` 语义一致。
 
 ### 11.6 传统测试平台导入指南
 

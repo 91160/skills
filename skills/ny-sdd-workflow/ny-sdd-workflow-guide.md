@@ -1,7 +1,9 @@
-# SDD Workflow v1.0.3 — 完整流程图与使用指南
+# SDD Workflow v1.0.4 — 完整流程图与使用指南
 
-> 本文档是 NY-SDD-Workflow v1.0.3 的完整参考手册，涵盖架构全景、流程图、使用指南、FAQ 和避坑指南。
+> 本文档是 NY-SDD-Workflow v1.0.4 的完整参考手册，涵盖架构全景、流程图、使用指南、FAQ 和避坑指南。
 > 配套文件：`AGENTS.md`（核心规则）、`rules/phase-*.md`（阶段规则）、`README.md`（项目概览）。
+>
+> **v1.0.4 关键变化**：新增 §4 归档后 **E2E 端到端附加验收**（`e2e-test-runner` Skill + `/sdd-e2e-test` 命令，仅 Playwright）。E2E 是**附加验收**：无论单模块 / 多模块 / 连续模式，**只能在所有 dev-order 模块全部归档完成后执行**，不属于主流程状态机，不影响/不阻塞任何模块开发，仅以 `ref:` 续行留痕（不写 `last:` / `produced:`，见 AGENTS.md 编号规约第 8 条）。
 
 ---
 
@@ -47,7 +49,8 @@
 │      §3.0~§3.11  通道判断 + 标准 11 步                        │
 │                                                              │
 │    §4  归档              phase-archive.md                    │
-│      12 项检查 + 衔接下一模块                                 │
+│      15 项检查 + 衔接下一模块                                 │
+│      + 全部归档后 E2E 附加验收（情况 A 才触发，附加非阻塞）   │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -163,9 +166,16 @@ flowchart TD
   P311_Check -->|回环 + 原始 last §4| P4
   P311_Check -->|回环 + 原始 last §3.x| Resume([回到原位继续开发])
 
-  P4 --> P4_Mode{执行模式}
+  P4 --> P4_AllDone{全部模块<br/>已归档?}
+  P4_AllDone -->|否 还有下一模块| P4_Mode{执行模式}
+  P4_AllDone -->|是 全部完成<br/>或单模块| E2E{E2E 附加验收<br/>适用性判断}
   P4_Mode -->|feature 连续| P22
-  P4_Mode -->|feature 逐个/bug/refactor| End([等待用户指令])
+  P4_Mode -->|feature 逐个| End([等待用户指令])
+  E2E -->|适用 用户确认执行| E2ERun[e2e-test-runner<br/>Playwright]
+  E2E -->|不适用/bug/用户跳过| E2ESkip[记录 ref: SKIP 续行]
+  E2ERun --> E2EEnd([SDD 工作流完结])
+  E2ESkip --> E2EEnd
+  P4_Mode -.bug/refactor 归档.-> End
 
   classDef gModule fill:#ffe6cc,stroke:#d79b00
   classDef phase1 fill:#d5e8d4,stroke:#82b366
@@ -225,10 +235,14 @@ G0.5 路由 → §1（无 .project/）
   (§3.7.1 自动化单测 → unit-test-generator 设计+生成+执行+报告)
   (§3.8 有 pending → 循环回 §3.1)
   ↓
-§4 归档
+§4 归档（15 项检查）
   ↓
-连续模式 → §2.2 下一模块 ↺
-逐个确认 → 等待用户
+还有下一模块：连续模式 → §2.2 下一模块 ↺ / 逐个确认 → 等待用户
+全部模块归档完成（情况 A）↓
+§4 后 E2E 附加验收（适用性判断 → 用户确认）
+  · 适用且确认 → e2e-test-runner（Playwright）→ 报告 → 完结
+  · 不适用 / bug / 用户跳过 → 记 ref: SKIP 续行 → 完结
+  （E2E 仅在全部归档后触发，附加非阻塞，不写 last:/produced:）
 ```
 
 #### 路径 B：旧项目 feature
@@ -508,7 +522,7 @@ AI 执行中遇到：
 
 ```bash
 # 1. 拉取 skill 包到 ~/.claude/skills/ny-sdd-workflow/（即 <SDD_DIR>）
-npx skills add https://git.nykjsrv.cn/ai-coding/skills.git \
+npx skills add https://github.com/91160/skills.git \
   --skill ny-sdd-workflow --yes
 
 # 2. 在 AI 对话中触发交互式安装（首次必须用自然语言，因为 slash 命令还未安装）
@@ -710,7 +724,8 @@ node <SDD_DIR>/bin/cli.js remove
        [Spec 状态同步]
        [写入 context.md: last: §3.11]
        [进入 §4 归档]
-       [12 项检查通过]
+       [15 项检查通过]
+       [情况 B：还有下一模块 02 → 不触发 E2E（E2E 仅全部归档后）]
 
        【模块完成】01-用户认证 已归档。
        下一模块：02-订单管理（dev-order: 2）
@@ -1343,6 +1358,33 @@ AI 通过 G0.4.1 bug 意图二次判定识别：如果 context.md `last` 在 §3
 
 ---
 
+### 5.10 E2E 端到端附加验收（v1.0.4 新增）
+
+**定位**：E2E 是 SDD 的**附加验收**，**不属于主流程状态机**。核心铁律（AGENTS.md 编号规约第 8 条）：
+
+- **只在全部归档后触发**：无论单模块、多模块、连续模式还是逐个确认模式，**仅当所有 dev-order 模块全部归档完成（§4 归档「情况 A」）才进入 E2E**。情况 B（还有下一模块）、情况 C（bug/refactor）一律不触发。无法确认是否全部归档时，AI 触发 G2 让你确认，绝不擅自进入。
+- **绝不影响主流程**：E2E 不阻塞、不改写任何模块的章节状态；它失败也只是给你一个处理选项，不会回滚已归档的模块。
+- **不进状态机**：E2E **不写 `last:`、不写 `produced:`**，只在「§4 归档」那条记录后追加一行 `ref:` 续行留痕。下次对话的状态恢复 / 执行自审会跳过 `ref:` 续行，E2E 报告丢失也不触发任何回滚。
+
+**链路**：§2.7 `test-case-design` 产出 `channel=e2e` + `e2e-exec` 契约 → 全部模块 §4 归档 → 适用性判断 → 用户确认 → `e2e-test-runner` 把 `e2e-exec` 转 Playwright spec 并执行 → 生成 `.outdocs/e2e-report.md` + `.html`。
+
+**适用性**：
+
+| 场景 | 是否做 E2E |
+|---|---|
+| 新项目 feature | 有可浏览器访问产品端 → 询问执行；否则告知原因 + 记 `ref: SKIP` |
+| 旧项目新增需求 | 本次需求涉及浏览器产品端且有 `channel=e2e` → 询问执行；否则 `ref: SKIP` |
+| bug 修复 | 不做 E2E（依赖 §3.6/§3.7），记 `ref: SKIP` |
+| refactor/技术优化 | 仅影响主流程/路由/接口契约/权限/跨模块状态流转时才做，否则 `ref: SKIP` |
+
+**能力边界**：仅 Playwright。不支持 Cypress、小程序原生容器、原生 App、桌面客户端（含 Electron）。**不修改业务代码，不要求/不建议业务代码加 selector 或 data-testid**。
+
+**结论路由**：`PASS` → 完结；`PARTIAL`/`SKIP` → 允许完结（标注覆盖降级 / 未执行原因）；`FAIL` → 三选一（进入 bug 修复回环 / 标记已知问题完结 / 停止人工排查）。
+
+**独立重跑**：`/sdd-e2e-test` 可在 SDD 项目内重跑。若尚未全部归档，只能「独立参考执行」——仅生成报告，不向 context.md 写任何 `last:`/`produced:`/`ref:`，零状态副作用。
+
+---
+
 ## 第六部分：规则文件速查表
 
 ### 6.1 文件清单
@@ -1359,11 +1401,16 @@ ny-sdd-workflow/
     ├── phase-spec.md                ← §2 需求与设计
     ├── phase-coding.md              ← §3 编码变更通道
     ├── phase-archive.md             ← §4 归档
-    ├── quality-standards.md         ← 审计标准（PRD/REQ/DES/代码/自测）
-    ├── skill-routing.md             ← Skill 路由表 + 执行流程
-    └── fallback/
-        ├── frontend-scan.md         ← 前端内置扫描（兜底）
-        └── backend-scan.md          ← 后端内置扫描（兜底）
+│   ├── quality-standards.md         ← 审计标准（PRD/REQ/DES/代码/自测）
+│   ├── skill-routing.md             ← Skill 路由表 + 执行流程
+│   └── fallback/
+│       ├── frontend-scan.md         ← 前端内置扫描（兜底）
+│       └── backend-scan.md          ← 后端内置扫描（兜底）
+├── tools/                           ← 内置子 Skill（§1~§4 按需调用）
+│   ├── test-case-design/            ← §2.7 功能测试用例（产 channel=e2e + e2e-exec）
+│   ├── unit-test-generator/         ← §3.7.1 自动化单测
+│   └── e2e-test-runner/             ← §4 全部归档后 E2E 附加验收（Playwright only）
+└── .claude/commands/sdd-*.md        ← 14 个 Slash Commands（含 /sdd-e2e-test）
 ```
 
 ### 6.2 何时读哪个文件
@@ -1375,6 +1422,7 @@ ny-sdd-workflow/
 | 需求澄清/方案设计/评审 | AGENTS.md + phase-spec.md |
 | 编码/审计/自测 | AGENTS.md + phase-coding.md + quality-standards.md |
 | 模块归档 | AGENTS.md + phase-archive.md |
+| 全部归档后 E2E 附加验收 | phase-archive.md（情况 A）+ tools/e2e-test-runner/SKILL.md |
 | 安装 Skill | skill-routing.md |
 | context Skill 不可用时 | fallback/frontend-scan.md 或 backend-scan.md |
 
@@ -1399,6 +1447,8 @@ ny-sdd-workflow/
 | `.project/specs/rules/frontend-context.md` | AI 写 | §1.3 |
 | `.project/specs/rules/backend-context.md` | AI 写 | §1.3 |
 | `.project/changelog/YYYY-MM-DD-*.md` | AI 写 | §3.9 |
+| `.test/e2e/*`（spec/config/report 等） | AI 写（e2e-test-runner） | §4 全部归档后实际执行 E2E 时 |
+| `.outdocs/e2e-report.md` / `.html` | AI 写（e2e-test-runner） | §4 全部归档后实际执行 E2E 时（入口级不执行则不生成） |
 | `.outdocs/*.md` | AI 写 | 各关键节点 |
 
 ---
@@ -1441,8 +1491,7 @@ G3 未覆盖场景兜底
   §2.3 方案设计
   §2.4 原型生成（仅 feature 含前端）
   §2.5 评审（人工）
-  §2.7 功能测试用例设计（test-case-design Skill）
-  E2E 测试：§4 全部模块归档后，用户确认执行（未来 Skill）
+  §2.7 功能测试用例设计（test-case-design Skill；channel=e2e 用例带 e2e-exec 契约，供 §4 E2E 消费）
   §2.6 Spec Sync（横切动作，非线性）
 
 §3 编码变更通道
@@ -1465,7 +1514,12 @@ G3 未覆盖场景兜底
   §3.10 Spec 状态同步（bug 修复回环追加 REQ 记录 + DES 标注）
   §3.11 写入 context.md（bug 修复回环：原始 last §3.x→回原位 / §4→重新归档）
 
-§4 归档（单章节）
+§4 归档（单章节，15 项检查）
+  └─ 全部 dev-order 模块归档完成（情况 A）后：E2E 附加验收
+       e2e-test-runner（Playwright only；消费 §2.7 channel=e2e + e2e-exec）
+       附加非阻塞：仅情况 A 触发，不写 last:/produced:，只追加 ref: 续行
+       适用性：新/旧 feature 可执行则确认执行；bug 不做；refactor 看必要性
+       结论 PASS/PARTIAL/SKIP → 完结；FAIL → bug 修复回环 / 标记已知 / 人工排查
 ```
 
 ### 规约速查
@@ -1633,12 +1687,12 @@ T-01~T-06  开发自测规约（交互/跳转/渲染/接口/边界/返回值）
 
 ## 结语
 
-这份文档覆盖了 SDD Workflow v1.0.3 的**架构 + 流程图 + 使用指南 + FAQ + 避坑指南 + 速查表**。
+这份文档覆盖了 SDD Workflow v1.0.4 的**架构 + 流程图 + 使用指南 + FAQ + 避坑指南 + 速查表**。
 
 **快速上手的三步**：
 
 1. **读懂结构**：G 系列 = 全局规则（AGENTS.md），§ 系列 = 阶段流程（phase-*.md），声明头 = AI 跳转元数据
-2. **熟记主路径**：`G0 → §1 → §2 → §3 → §4`，不同任务类型有不同的分支（feature/bug/refactor）
+2. **熟记主路径**：`G0 → §1 → §2 → §3 → §4`，不同任务类型有不同的分支（feature/bug/refactor）；**E2E 是 §4 全部归档后的附加验收，不在主路径状态机内**
 3. **信任 AI 的主动询问**：凡是 blocking=true 的节点，AI 都会停下来问你，按提示回答即可
 
 **记住两条"黄金规则"**：
@@ -1648,6 +1702,6 @@ T-01~T-06  开发自测规约（交互/跳转/渲染/接口/边界/返回值）
 
 ---
 
-**文档版本**：v1.0.3
-**最后更新**：2026-04-27
-**配套工作流**：ny-sdd-workflow v1.0.3
+**文档版本**：v1.0.4
+**最后更新**：2026-05-19
+**配套工作流**：ny-sdd-workflow v1.0.4

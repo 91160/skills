@@ -46,23 +46,34 @@
 │   │   ├── ui/                        ← UI 设计稿（高保真）
 │   │   └── ui-spec/                   ← UI 解析文件（md 格式）
 │   └── tech/                          ← 技术文档
-├── .test-env.md                           ← 测试运行环境声明（§2.7 / §3.7.1 首次进入时按需生成 + 自动扫描项目配置补全；项目根目录，test-case-design / unit-test-generator 默认查找位置）
 ├── .test/                                 ← 测试产出根目录（独立于 .project）
+│   ├── .test-env.md                       ← 测试运行环境声明（§2.7 / §3.7.1 首次进入时按需生成 + 自动扫描项目配置补全；§4 E2E 缺失时可创建/补全并读取 e2e.* / vars.* / selectors.*）
 │   ├── testcases/                         ← §2.7 功能测试用例（test-case-design 产出）
 │   │   ├── TC-F-{xx}-{模块}.md            ← 按模块分文件
 │   │   ├── testcases.detailed.csv         ← 全局汇总（所有模块追加）
 │   │   └── testcases.traditional.csv
-│   └── unit/                              ← §3.7 单元测试（unit-test-generator 产出）
-│       ├── UT-{xx}-{模块}.md              ← 单测用例文档
-│       ├── skeleton/                      ← 单测代码骨架（原件，不删除）
-│       │   ├── *.jest.ts / *.junit.java / ...
-│       │   └── fixtures/*.json
-│       └── report.md                      ← 单元测试执行报告
+│   ├── unit/                              ← §3.7 单元测试（unit-test-generator 产出）
+│   │   ├── UT-{xx}-{模块}.md              ← 单测用例文档
+│   │   ├── skeleton/                      ← 单测代码骨架（原件，不删除）
+│   │   │   ├── *.jest.ts / *.junit.java / ...
+│   │   │   └── fixtures/*.json
+│   │   └── report.md                      ← 单元测试模块级执行报告（§3.7.1）
+│   └── e2e/                               ← §4 全部归档后 E2E 附加验收（e2e-test-runner 产出，仅实际执行时生成）
+│       ├── E2E-PLAN.md                    ← 执行计划
+│       ├── playwright.config.ts           ← Playwright 配置
+│       ├── results.json                   ← 统一结果模型
+│       ├── data/                          ← 测试数据（含 generated-data.json）
+│       ├── specs/                         ← 生成的 Playwright spec（含 helpers/）
+│       ├── artifacts/                     ← 截图/trace/video 证据
+│       ├── report.md                      ← E2E 模块级报告
+│       └── report.html                    ← E2E HTML 报告
 ├── .outdocs/
 │   ├── project-overview.md
 │   ├── api-doc.md
 │   ├── audit-report.md
 │   ├── unit-test-report.md
+│   ├── e2e-report.md                      ← §4 E2E 报告（仅实际执行 E2E 时生成）
+│   ├── e2e-report.html                    ← §4 E2E HTML 报告（仅实际执行 E2E 时生成）
 │   ├── task-report.md
 │   └── prd-change-log.md
 └── .agents/skills/                    ← ny-sdd-workflow 安装目录（所有子 Skill 已内置在 tools/ 下）

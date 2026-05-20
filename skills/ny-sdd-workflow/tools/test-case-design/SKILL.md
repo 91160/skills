@@ -4,11 +4,11 @@ description: >
   以测试工程师视角，为已通过评审的需求/设计生成**功能测试用例集**。
   输入 REQ/DES/PRD 等结构化文档，输出 TC 文档（含元数据、覆盖率矩阵、自审报告、用例正文）+ CSV 导出（禅道/飞书导入）。
   采用 6 种经典测试设计方法论（等价类/边界值/判定表/场景法/状态迁移/错误推测），确保功能测试覆盖完整。
-  产出的功能测试用例供 QA 手工执行、导入测试管理平台，或作为未来 E2E 测试 Skill 的输入。
+  产出的功能测试用例供 QA 手工执行、导入测试管理平台，或作为 E2E 测试 Skill 的输入。
   单元测试用例设计与代码生成由姊妹 Skill unit-test-generator 独立负责。
   中文触发词：生成测试用例、设计测试用例、测试用例设计、出一份测试用例、写测试方案、测试工程师视角、QA 测试用例、从 REQ/DES 生成测试、帮我写测试、按需求生成测试、设计 test case。
   英文触发词：test case design, generate test cases, QA test plan, design test cases, create test plan.
-  SDD 工作流触发：§2.5 测试用例设计、方案评审通过后、进入测试用例设计阶段、REQ DES 评审通过。
+  SDD 工作流触发：§2.7 功能测试用例设计（§2.5 评审通过后进入）、进入测试用例设计阶段、REQ DES 评审通过。
   不适用：仅样式/文案的快速通道改动、单纯运行已有测试（不是设计阶段）、纯手工探索性测试指引、
   代码审计（用 code-audit skill）、需求审计（用 prd-audit skill）。
 ---
@@ -17,16 +17,16 @@ description: >
 
 以测试工程师视角，接受结构化需求/设计文档，输出一份**既可人工阅读又可 AI 自动执行**的完整测试用例集。
 
-**核心承诺**：生成的 TC 文档每条用例都带 `tc-exec` 执行契约（Markdown-native 格式），后续的自测阶段 AI 可以直接解析并调用工具执行；QA 人工管理可以用并行导出的 CSV 文件直接导入测试管理工具。
+**核心承诺**：生成的 TC 文档同时服务人工 QA 与 E2E 自动化。`channel=e2e` 的用例必须带 `e2e-exec` 执行契约，后续 §4 的 `e2e-test-runner` 可以直接解析并生成 Playwright 用例；QA 人工管理可以用并行导出的 CSV 文件直接导入测试管理工具。
 
 **本 Skill 的职责边界**：
 - ✅ **测试工程师视角**：从 REQ/DES/PRD 设计测试用例（"测什么"）
 - ✅ 应用 6 种方法论（等价类 / 边界值 / 判定表 / 场景法 / 状态迁移 / 错误推测）
-- ✅ 生成 TC 文档（Markdown + tc-exec 契约）和 CSV 导出
+- ✅ 生成 TC 文档（Markdown + `e2e-exec` 契约）和 CSV 导出
 - ❌ **不生成单元测试代码**（"怎么写"）→ 请用姊妹 Skill `/unit-test-generator`
 
 **两个 Skill 的分工**：
-- `test-case-design`（本 Skill）→ 产出功能测试用例文档（manual/ui-dom/ui-visual channel）
+- `test-case-design`（本 Skill）→ 产出功能测试用例文档（e2e/visual/manual channel）
 - `unit-test-generator` → 独立设计单测用例 + 生成代码 + 执行（unit/api/db channel）
 - 两者独立，无上下游依赖
 
@@ -53,28 +53,28 @@ Skill 支持两种使用模式，**首次调用时 Step 0 自动识别**：
 
 | 章节 | 测试类型 | channel | 来源 |
 |---|---|---|---|
-| 一、业务流程测试 | 正常/异常业务流程验证（场景法 + 状态迁移） | `manual` | REQ 验收标准 |
-| 二、UI 交互测试 | 前端 DOM 操作验证（页面跳转/表单提交/状态切换） | `ui-dom` | DES UI 还原 + PRD 视觉内容 |
-| 三、视觉回归测试 | 页面视觉一致性验证 | `ui-visual` | PRD 视觉内容 + prototype-spec.md |
+| 一、业务流程测试 | 正常/异常业务流程验证（场景法 + 状态迁移） | `e2e`（可浏览器自动化时）/ `manual` | REQ 验收标准 |
+| 二、UI 交互测试 | 前端 DOM 操作验证（页面跳转/表单提交/状态切换） | `e2e` | DES UI 还原 + PRD 视觉内容 |
+| 三、视觉回归测试 | 页面视觉一致性验证 | `visual` | PRD 视觉内容 + prototype-spec.md |
 | 四、异常与边界测试 | 异常路径/边界条件/错误处理验证 | `manual` | DES 异常分支 + bug 复现 + refactor 等价性 |
 | 五、覆盖率矩阵 | REQ 验收标准 ↔ TC 用例交叉比对 | — | 全部 TC 汇总 |
 
-**合法 channel（仅 3 个）**：`manual` / `ui-dom` / `ui-visual`
+**合法 channel（仅 3 个）**：`e2e` / `visual` / `manual`
 
 > 单元测试（unit/api/db channel）由姊妹 Skill `/unit-test-generator` 独立负责，不在本 Skill 范围内。
 
 ### 产物定位
 
-- **TC 文档** (`.md`)：主产物，描述"测什么、怎么判断通过"，供 QA 手工执行或未来 E2E Skill 消费
+- **TC 文档** (`.md`)：主产物，描述"测什么、怎么判断通过"，其中 `channel=e2e` 的用例必须带 `e2e-exec` 契约，供 E2E Skill 消费
 - **CSV 导出** (`.csv`)：QA 人工管理版本，可导入测试管理平台（TestRail/Zephyr/Xray/禅道/飞书多维表格）
 
 ### 与 unit-test-generator 的关系
 
 ```
-test-case-design（本 Skill）→ 功能测试用例（manual/ui-dom/ui-visual）
+test-case-design（本 Skill）→ 功能测试用例（e2e/visual/manual）
   · QA 手工执行
   · 导入禅道/飞书
-  · 未来 E2E Skill 的输入
+  · §4 E2E Skill 的输入
 
 unit-test-generator（独立 Skill）→ 单元测试（unit/api/db）
   · 自主设计单测用例 + 生成代码 + 执行 + 报告
@@ -95,8 +95,8 @@ Skill 通过对话上下文接受以下字段。调用方（SDD workflow 或独�
 | `task_type` | **必需** | `feature` / `bug` / `refactor` | 交互式询问，不接受 AI 猜测 |
 | `output_dir` | **必需** | 目录路径 | SDD 项目有默认值，非 SDD 项目交互式询问 |
 | `design_source` | 可选 | DES 文件路径 或 文本 | 从 `requirement_source` 推断，TC 头部标注 `inferred-des: true` |
-| `prd_source` | 可选 | PRD 文件路径 或 图片（支持 A 档文本 + B 档图片共 13 种格式，详见 `references/prd-format-handlers.md`） | 跳过 UI 测试章节，第四章标"不涉及" |
-| `runtime_source` | 可选 | `.test-env.md` 路径 | 按项目根默认路径查找；仍不存在则 Y 警告 + 全 manual 降级 |
+| `prd_source` | 可选 | PRD 文件路径 或 图片（支持 A 档文本 + B 档图片，完整扩展名见 `references/prd-format-handlers.md`） | 无视觉内容时第三章 视觉回归测试标"不涉及" |
+| `runtime_source` | 可选 | `.test/.test-env.md` 路径 | 默认查找 `.test/.test-env.md`；仍不存在则 Y 警告 + TODO 占位 |
 | `reverse_scan_hint` | 可选 | 已有代码深度扫描产出目录 | 跳过"已有函数/惯例"检索 |
 | `output_format` | 可选 | `md` / `csv` / `md+csv` | 默认 `md+csv`，同时生成 TC 文档和 CSV 导出文件 |
 | `csv_template` | 可选 | `detailed` / `traditional` / `both` | 默认 `detailed`。`detailed` = 12 列技术追溯版；`traditional` = 7 列传统 QA 版（禅道/飞书友好）；`both` = 同时产出两份 |
@@ -192,7 +192,7 @@ Skill 通过对话上下文接受以下字段。调用方（SDD workflow 或独�
    - **`design_source`** 读取（同上规则，若提供）
 
    - **`prd_source`** 读取（多格式，最复杂）：
-     - 支持 A 档（`.md`/`.markdown`/`.mdx`/`.txt`/`.html`/`.htm`）和 B 档（`.png`/`.jpg`/`.jpeg`/`.webp`/`.gif`/`.svg`/`.bmp`/`.tiff`）共 13 种格式
+     - 支持 A 档（`.md`/`.markdown`/`.mdx`/`.txt`/`.html`/`.htm`）和 B 档（`.png`/`.jpg`/`.jpeg`/`.webp`/`.gif`/`.svg`/`.bmp`/`.tiff`）；完整扩展名以 `references/prd-format-handlers.md` 各档「支持扩展名」表为准
      - A 档文本 → Read 直读，按 prd-format-handlers.md 的 8 类信息提取
      - B 档图片 → Read 加载后 Claude 多模态视觉识别，按 prd-format-handlers.md 的 7 类 UI 信息提取（布局/组件/字段/交互/状态/导航/视觉规格）
      - 多文件混合 → 按 prd-format-handlers.md 的合并规则（文本权威 + 图片补充 + 冲突检测）
@@ -244,35 +244,32 @@ Skill 通过对话上下文接受以下字段。调用方（SDD workflow 或独�
 
 **动作**：
 
-1. **`.test-env.md` 不需要**：
-   - 本 Skill 只产出功能测试用例（manual/ui-dom/ui-visual channel），这些 channel 不涉及代码自动执行
-   - `.test-env.md` 是 unit-test-generator 的运行时配置，与本 Skill 无关
-   - 跳过 runtime 加载，直接进入 Step 3
+1. **读取 `.test/.test-env.md`（存在则读取，不存在则继续）**：
+   - 本 Skill 需要从 `.test/.test-env.md` 读取 E2E 变量、运行端点、可选 selector 映射和测试数据策略，用于生成 `e2e-exec`
+   - `.test/.test-env.md` 不存在时，仍生成 TC 文档，但所有引用变量必须写成 TODO 占位并在回执中列出待补字段
+   - 不因 `.test/.test-env.md` 缺失降级 channel；E2E 是否能运行由 §4 的 `e2e-test-runner` 判断
 
-4. **能力评估**：基于 `mcp_capabilities` 为每个 channel 打标：
+2. **能力评估**：为每个 channel 打标：
 
 | channel | 说明 |
 |---|---|
-| `manual` | 人工手工执行（永远可用） |
-| `ui-dom` | 前端 DOM 交互（需 Playwright 或未来 E2E Skill 执行） |
-| `ui-visual` | 视觉回归（需截图对比工具或人工目视） |
-| `ui-dom` | `mcp_capabilities` 含 `playwright` 或 `browser` |
-| `ui-visual` | 永远不可自动（永远 `manual` 执行模式） |
-| `manual` | 永远不可自动（兜底） |
+| `e2e` | Playwright 端到端自动化，用例必须包含 `e2e-exec` |
+| `visual` | 视觉回归，E2E 阶段可生成截图/报告入口；无基准时不自动像素断言 |
+| `manual` | 只能人工执行或外部系统确认 |
 
 **输出**：
 
 ```
 【功能测试 channel】
-  合法 channel: manual / ui-dom / ui-visual
-  ui-dom 执行方式: 未来 E2E Skill 或 Playwright
-  ui-visual 执行方式: 视觉对比工具或人工目视
+  合法 channel: e2e / visual / manual
+  e2e 执行方式: §4 e2e-test-runner（Playwright only）
+  visual 执行方式: 截图/报告入口或人工目视
   manual 执行方式: QA 手工执行
 ```
 
 ### Step 3: 选择策略 + 应用方法论生成用例蓝本
 
-**目的**：按 `task_type` 选择差异化策略，应用 6 种方法论生成用例蓝本（尚未写 tc-exec 块）。
+**目的**：按 `task_type` 选择差异化策略，应用 6 种方法论生成用例蓝本（尚未写 `e2e-exec` 块）。
 
 **动作**：
 
@@ -281,17 +278,17 @@ Skill 通过对话上下文接受以下字段。调用方（SDD workflow 或独�
    | task_type | 策略 |
    |---|---|
    | feature | 4 章全量（业务流程/UI 交互/视觉回归/异常边界），6 种方法论全套 |
-   | bug | 聚焦第五章（复现用例 + 回归用例），其他章节按 bug 影响域补充 |
-   | refactor | 聚焦等价性断言（禁止基于实现细节），第五章为核心 |
+   | bug | 聚焦第四章 异常与边界测试（复现用例 + 回归用例），其他章节按 bug 影响域补充 |
+   | refactor | 聚焦等价性断言（禁止基于实现细节），以第四章 异常与边界测试（等价性回归）为核心 |
 
 2. **应用 6 种方法论**（引用 `references/design-rules.md` 第一章）：
 
-   - **场景法** → 主要用于第一章 功能测试用例
+   - **场景法** → 主要用于第一章 业务流程测试用例
    - **等价类划分** → 第一/二章，字段有效/无效分类
    - **边界值分析** → 第二/三章，覆盖 min/max/越界/空/超长/特殊字符
    - **判定表** → 第一/三章，条件数 ≥2 时构造真值表
    - **状态迁移** → 第一章 业务流程测试（状态流转场景）
-   - **错误推测** → 第五章 异常与回归用例
+   - **错误推测** → 第四章 异常与边界测试（含回归用例）
 
 3. **生成用例蓝本清单**（每条含以下字段）：
 
@@ -306,11 +303,11 @@ Skill 通过对话上下文接受以下字段。调用方（SDD workflow 或独�
 
 ```
 【用例蓝本清单】（共 {N} 条）
-  第一章 功能测试: {n} 条
-  第二章 接口测试: {n} 条
-  第三章 数据/状态: {n} 条
-  第四章 UI 测试: {n} 条
-  第五章 异常/回归: {n} 条
+  第一章 业务流程测试: {n} 条
+  第二章 UI 交互测试: {n} 条
+  第三章 视觉回归测试: {n} 条
+  第四章 异常与边界测试: {n} 条
+  （第五章 覆盖率矩阵 / 第六章 不测范围 在组装阶段生成）
   
   方法论分布:
     - 场景法: {n}
@@ -321,16 +318,18 @@ Skill 通过对话上下文接受以下字段。调用方（SDD workflow 或独�
     - 错误推测: {n}
 ```
 
-### Step 4: 分配 channel + 编写 tc-exec 块
+### Step 4: 分配 channel + 编写 e2e-exec / 测试说明
 
-**目的**：为每条蓝本用例最终确定 channel，并按 tc-exec Markdown 格式逐条写执行块。
+**目的**：为每条蓝本用例最终确定 channel，并为 `channel=e2e` 的用例生成可由 e2e-test-runner 消费的 `e2e-exec` 契约。
 
 **动作**：
 
 1. **channel 最终分配**（引用 `references/channel-playbooks.md` 的决策树）：
    - 按用例性质选 channel
-   - 对比 Step 2 的可执行性清单
-   - 不可执行的 channel 强制降级（降级链：`ui-dom → ui-visual → manual`）
+   - 前端页面流程、表单、跳转、加载/错误/空状态优先分配 `e2e`
+   - 视觉一致性分配 `visual`
+   - 外部系统、物理设备、无法通过浏览器表达的业务验证分配 `manual`
+   - 不按当前工具能力降级；运行时可执行性由 §4 e2e-test-runner 判断并报告
 
 2. **逐条编写功能测试用例**（步骤 + 预期结果格式）：
 
@@ -339,32 +338,74 @@ Skill 通过对话上下文接受以下字段。调用方（SDD workflow 或独�
 
    **channel**: {x} | **priority**: {x} | **exec-mode**: {x} | **source**: REQ-{xx} 验收标准 #{N} 或 DES-{section}（溯源到需求/设计文档）
 
-   **请求**:
-   ​```{fence 语言}
-   {请求内容}
-   ​```
+   **步骤**:
+   1. {操作步骤}
+   2. {操作步骤}
+   
+   **预期结果**:
+   - {预期行为}
+   - {预期行为}
+   ```
 
-   **前置**:
-   - `{动作}`
+3. **`channel=e2e` 用例必须追加 `e2e-exec` 代码块**：
 
-   **断言**:
-   - `{path} {op} {expected}`
+   ````markdown
+   ```e2e-exec
+   framework: playwright
+   runnable: true
+   module: {模块编号-模块名}
+   page: {page_key}
+   url: {相对路径，如 /login}
+   tags: [{smoke/regression/业务标签}]
+   
+   data:
+     username: ${vars.test_user}
+   
+   setup:
+     - action: {前置动作，可为空数组}
+   
+   steps:
+     - action: goto
+       url: /login
+     - action: fill
+       target:
+         selector: ${selectors.login.username}
+         role: textbox
+         name: 用户名
+         placeholder: 请输入用户名
+         label: 用户名
+       value: ${vars.test_user}
+   
+   assertions:
+     - type: url_contains
+       value: /home
+     - type: visible
+       target:
+         selector: ${selectors.home.username}
+         text: 用户名
+   
+   teardown: []
+   ```
+   ````
 
-   **清理**:
+4. **`visual` / `manual` 用例只写测试说明，不写 `e2e-exec`**：
+   ```
+   **测试说明**:
    - `{动作}`
    ```
 
-3. **格式强制规则**：
-   - 所有断言操作符必须在 15 个固定枚举内（`==` / `!=` / `>` / `>=` / `<` / `<=` / `exists` / `not_exists` / `type` / `regex` / `contains` / `not_contains` / `length==` / `length>=` / `length<=`）
-   - 所有断言用行内反引号 `` `...` `` 包裹
-   - 每行一条原子断言，禁止合并
-   - 所有 `${env.xxx}` 变量必须在 `.test-env.md` 中存在，否则 Skill 报错并指出具体变量路径
+5. **格式强制规则**：
+   - `channel=e2e` 必须有且仅有一个 `e2e-exec` 代码块
+   - `framework` 固定为 `playwright`
+   - 变量引用使用 `${vars.xxx}` / `${selectors.xxx}` / `${e2e.xxx}` 三类路径；缺失时列入回执 TODO，不中断 TC 文档生成
+   - `target` 支持 `selector` / `role` / `name` / `placeholder` / `label` / `text` / `css` / `xpath`，由 e2e-test-runner 按顺序尝试
+   - 不在 TC 文档中要求或建议业务代码新增测试属性或 selector
 
-4. **channel 使用示例请参考** `references/channel-playbooks.md`，每个 channel 都有完整模板和"常见错误"清单。
+6. **channel 使用示例请参考** `references/channel-playbooks.md`，每个 channel 都有完整模板和"常见错误"清单。
 
 ### Step 5: 自审（TC-01 ~ TC-06 + 一致性校验）
 
-**目的**：按 TC-01 ~ TC-06 审计规则逐项检查，同时强制 Markdown 描述与 tc-exec 块的语义对齐。
+**目的**：按 TC-01 ~ TC-06 审计规则逐项检查，同时强制 Markdown 描述与 `e2e-exec` 块的语义对齐。
 
 **动作**：
 
@@ -380,9 +421,9 @@ Skill 通过对话上下文接受以下字段。调用方（SDD workflow 或独�
 2. **一致性校验**（强制语义对齐）：
    - 遍历每条用例
    - 检查 Markdown 描述中的"前置条件" ↔ `**前置**` bullet 是否语义一致
-   - 检查"测试步骤" ↔ 请求 fence block 是否语义一致
-   - 检查"预期结果" ↔ `**断言**` bullet 是否语义一致
-   - 任一不一致 → 修复描述或 tc-exec 块，使两者等价
+   - 检查"测试步骤" ↔ `e2e-exec.steps` 是否语义一致（仅 `channel=e2e`）
+   - 检查"预期结果" ↔ `e2e-exec.assertions` 是否语义一致（仅 `channel=e2e`）
+   - 任一不一致 → 修复描述或 `e2e-exec` 块，使两者等价
 
 3. **不通过项当场修复**：
    - 单项修复**超 3 次仍未通过** → 触发停车信号，向用户报告
@@ -420,9 +461,9 @@ Skill 通过对话上下文接受以下字段。调用方（SDD workflow 或独�
    2. 组装覆盖率矩阵（4 列）+ 覆盖率统计 + 方法论统计
    3. 粘贴自审报告
    4. 组装用例总览表（6 列）
-   5. 组装第一章 业务流程测试（channel=manual，场景法+状态迁移+等价类）
-   6. 组装第二章 UI 交互测试（channel=ui-dom，或标"不涉及"）
-   7. 组装第三章 视觉回归测试（channel=ui-visual，或标"不涉及"）
+   5. 组装第一章 业务流程测试（channel=e2e/manual，场景法+状态迁移+等价类）
+   6. 组装第二章 UI 交互测试（channel=e2e，或标"不涉及"）
+   7. 组装第三章 视觉回归测试（channel=visual，或标"不涉及"）
    8. 组装第四章 异常与边界测试（channel=manual，错误推测+边界值+回归）
    9. 组装第五章 覆盖率矩阵 + 第六章 不测范围
 
@@ -482,8 +523,8 @@ Skill 通过对话上下文接受以下字段。调用方（SDD workflow 或独�
      
      用例分布:
        - 总数: {N}
-       - 按章节: 功能({n}) / 接口({n}) / 数据状态({n}) / UI({n}) / 异常({n})
-       - 按通道: manual({n}) / ui-dom({n}) / ui-visual({n})
+       - 按章节: 业务流程({n}) / UI交互({n}) / 视觉回归({n}) / 异常边界({n})
+       - 按通道: e2e({n}) / visual({n}) / manual({n})
        - 可执行率: {%}
      
      PRD 来源:
@@ -495,18 +536,16 @@ Skill 通过对话上下文接受以下字段。调用方（SDD workflow 或独�
      下一步建议:
        - Markdown TC 文档供 AI 执行或人工评审
        - CSV 可导入 TestRail / Zephyr / Xray / 禅道 / 飞书多维表格（导入指南见 references/csv-export-schema.md 第七章）
-       - **派生可跑单测代码**: 如果需要单测骨架代码，用姊妹 Skill `/unit-test-generator` 消费本次生成的 TC 文档：
-         `"用 unit-test-generator 读 {tc_path} 生成 {jest/vitest/junit5/pytest/gotest} 单测到 {output_dir}/skeleton/"`
+       - **执行 E2E**: 全部模块归档后，§4 会调用 `e2e-test-runner` 消费本次生成的 `channel=e2e` 用例
    ```
 
 6. **SDD 项目额外追加 post-processing 提示**：
 
    ```
    【SDD post-processing 提示】
-     请 SDD workflow（§2.5 调用方）执行以下后处理：
-       1. 读取 TC 文档头部的元数据，更新 index.md 的 test-case-status 列为 {done / doc-only}
-       2. 如需单测代码：继续调用 /unit-test-generator Skill（SDD §2.5 Step 2.5）
-          它会消费本 Skill 产出的 TC 文档，派生骨架到 {output_dir}/skeleton/
+     请 SDD workflow（§2.7 调用方）执行以下后处理：
+       1. 读取 TC 文档头部 `test-case-status`，原值回写 index.md 同名列。取值集与 `tc-doc-template.md` 元数据表一致：`draft`（设计中/自审未过）/ `done`（正常完成）/ `doc-only`（framework_hint+test_commands 均缺失，仅文档）/ `fallback`（Skill 缺失，§2.7 兜底产出简化 TC-F 大纲）/ `skipped`（§2.7 整体跳过/无法产出）
+       2. E2E 用例：保留 `channel=e2e` + `e2e-exec` 契约，供 §4 e2e-test-runner 执行
        3. 在 .project/specs/change-log-specs.md 留痕（触发源 [test-case]）
        4. 在 .project/context.md 追加：{日期} {module} 测试用例设计完成（{N} 条用例）
    ```
@@ -535,8 +574,8 @@ Skill 通过对话上下文接受以下字段。调用方（SDD workflow 或独�
 
   用例分布:
     - 总数: 20
-    - 按章节: 功能(4) / 接口(8) / 数据状态(3) / UI(3) / 异常(2)
-    - 按通道: manual(12) / ui-dom(5) / ui-visual(3)
+    - 按章节: 业务流程(8) / UI交互(5) / 视觉回归(3) / 异常边界(4)
+    - 按通道: e2e(5) / visual(3) / manual(12)
     - 可执行率: 70%
 
   自审: PASS
@@ -544,8 +583,7 @@ Skill 通过对话上下文接受以下字段。调用方（SDD workflow 或独�
   下一步建议: 
     - 查看 TC 文档进行人工评审
     - CSV 导入测试管理工具管理
-    - 如需派生单测代码，调用 /unit-test-generator Skill：
-      "用 unit-test-generator 读 /Users/foo/project/test-cases/TC-F-login-登录.md 生成 jest 单测"
+    - 全部模块归档后由 §4 调用 e2e-test-runner 执行 channel=e2e 的用例
 ```
 
 ---
@@ -556,7 +594,7 @@ SDD 项目下，在回执前追加标准 Skill 执行日志（与 ny-sdd-workflo
 
 ```
 【Skill 执行日志】
-  阶段: §2.5 测试用例设计
+  阶段: §2.7 功能测试用例设计
   Skill: test-case-design
   路径: {SKILL_DIR}/tools/test-case-design/
   安装: 跳过(已存在) / 安装成功 / 安装失败
@@ -572,13 +610,13 @@ SDD 项目下，在回执前追加标准 Skill 执行日志（与 ny-sdd-workflo
 
 2. **Token 预算**：完整执行一次 Skill 对 20 条用例的模块约需 15-30K tokens（拆分后比单一 Skill 少约 20%）。对 50+ 条用例的大模块建议拆分子模块分批生成。
 
-3. **一致性是底线**：Step 5 的一致性校验是 Skill 的质量门禁。宁可回到 Step 3/4 重写，也不能放过"描述和 tc-exec 不等价"的用例——这种用例会让下游 unit-test-generator 派生错误代码。
+3. **一致性是底线**：Step 5 的一致性校验是 Skill 的质量门禁。宁可回到 Step 3/4 重写，也不能放过"描述和 e2e-exec 不等价"的用例——这种用例会让下游 e2e-test-runner 生成错误的 Playwright 代码。
 
-4. **不要 AI 自由发明操作符**：15 个断言操作符、6 个 mcp 枚举、3 个功能测试 channel（manual/ui-dom/ui-visual）都是**硬约束**。想表达未覆盖的语义，必须用现有组合（比如想表达 `starts_with` 就用 `regex`）。
+4. **不要 AI 自由发明 channel 或 E2E 动作**：3 个功能测试 channel（e2e/visual/manual）和 `e2e-exec` 支持的动作/断言都是**硬约束**。想表达未覆盖的语义，必须用现有组合或降级为 manual。
 
-5. **与 unit-test-generator 独立**：本 Skill 只产出功能测试用例（manual/ui-dom/ui-visual），不使用 tc-exec 的代码执行格式。unit-test-generator 独立处理单元测试（unit/api/db channel）。
+5. **与 unit-test-generator 独立**：本 Skill 只产出功能测试用例（e2e/visual/manual）。unit-test-generator 独立处理单元测试（unit/api/db channel），不消费本 Skill 的 `e2e-exec`。
 
-6. **非 SDD 项目下的隐式依赖**：用户独立调用时，如果没有 `.test-env.md`，tc-exec 的变量引用会失效。Skill 会在 Step 2 明确警告并提供模板，但不强制用户必须先写（用户可选继续，此时所有用例降级为 manual）。
+6. **非 SDD 项目下的隐式依赖**：用户独立调用时，如果没有 `.test/.test-env.md`，`e2e-exec` 的变量引用可能需要 TODO 占位。Skill 会在 Step 2 明确警告并提供模板，但不强制用户必须先写；运行时由 e2e-test-runner 判断 PASS/PARTIAL/SKIP/FAIL。
 
 7. **bug 和 refactor 必须有 `affected-module`**：这是 bug 回归测试和 refactor 等价性断言的起点。缺失时 Skill 会拒绝进入 Step 3，要求用户先定位受影响模块。
 
@@ -595,18 +633,24 @@ SDD 项目下，在回执前追加标准 Skill 执行日志（与 ny-sdd-workflo
 | 文件 | 何时读取 |
 |---|---|
 | `references/prd-format-handlers.md` | Step 1（PRD 多格式加载和合并） |
-| `references/test-env-template.md` | Step 2（解析 `.test-env.md`） |
+| `references/test-env-template.md` | Step 2（解析 `.test/.test-env.md`） |
 | `references/design-rules.md` | Step 3（设计方法论）+ Step 5（自审规则） |
-| ~~`references/tc-exec-schema.md`~~ | 已移除（功能测试用例不使用 tc-exec 代码执行格式） |
+| `references/e2e-exec-schema.md` | Step 4（`e2e-exec` 动作/断言契约） |
 | `references/channel-playbooks.md` | Step 4（channel 选择 + 模板） |
 | `references/tc-doc-template.md` | Step 6（组装 TC 文档） |
 | `references/csv-export-schema.md` | Step 6（并行组装 CSV） |
 
-**与 unit-test-generator 的关系**：本 Skill 和 unit-test-generator 完全独立。本 Skill 产出功能测试用例（人工可读格式），unit-test-generator 独立设计和生成单元测试代码。两者无共享文件依赖。
+**与 unit-test-generator 的关系**：本 Skill 和 unit-test-generator 完全独立。本 Skill 产出功能测试用例（人工可读 + E2E 契约），unit-test-generator 独立设计和生成单元测试代码。两者无共享文件依赖。
 
 ---
 
 ## 版本
+
+- **v1.3**: 2026-05-18 E2E 契约版
+  - 功能测试 channel 调整为 `e2e` / `visual` / `manual`
+  - `channel=e2e` 用例必须生成 `e2e-exec` 契约，供 §4 `e2e-test-runner` 生成 Playwright 用例
+  - `.test/.test-env.md` 重新作为 E2E 变量 / 端点 / 可选 selector 映射来源
+  - 不向 §3 编码阶段或业务代码增加任何 selector / data-testid 约束或建议
 
 - **v1.2**: 2026-04-15 CSV 双模板版
   - 新增 `csv_template` 参数（`detailed` / `traditional` / `both`）
@@ -621,18 +665,18 @@ SDD 项目下，在回执前追加标准 Skill 执行日志（与 ny-sdd-workflo
   - 工作流从 8 步瘦身到 7 步（Step 0~6）
   - 移除 `framework_hint` 参数（现由 unit-test-generator 接收）
   - 移除 `references/framework-adapters.md`（搬到 unit-test-generator）
-  - 移除 tc-exec-schema.md（功能测试用例不再使用代码执行格式）
+  - 移除旧版代码执行契约依赖（功能测试用例不再直接产出单测代码）
   
-- **v1.1**: 2026-04-17 功能测试聚焦版
+- **v1.1.1**: 2026-04-17 功能测试聚焦版
   - 定位明确为"功能测试用例设计"（单元测试交由 unit-test-generator）
   - 去掉多模式概念，改为"项目环境检测"（自动判断 SDD 项目并填充默认路径）
   - TC 用例元数据新增 source 字段（REQ/DES 溯源）
   - SDD 项目默认输出路径改为 `.test/testcases/`
-  - .test-env.md 在功能测试层不再必需
+  - `.test/.test-env.md` 在功能测试层不再必需
 
 - **v1.0**: 2026-04-14 初版
   - 8 步工作流（含单测派生）
-  - Markdown-native tc-exec 格式（15 固定操作符）
+  - Markdown-native 执行契约雏形（已在 v1.3 演进为 `e2e-exec`）
   - 5 章 TC 文档结构（功能/接口/数据状态/UI/异常）→ v1.1 收窄为 4 章（业务流程/UI 交互/视觉回归/异常边界）
-  - PRD 多格式支持（A 档文本 6 种 + B 档图片 7 种，共 13 种扩展名）
+  - PRD 多格式支持（A 档文本 + B 档图片，扩展名清单见 `references/prd-format-handlers.md`）
   - 并行 CSV 导出（12 列精简 Schema，UTF-8 BOM，兼容 TestRail/Zephyr/Xray/禅道/飞书）

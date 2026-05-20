@@ -1,8 +1,8 @@
 ---
 inclusion: always
-description: "SDD 开发工作流 v1.0.3 — G 系列全局规则始终加载，§1~§4 阶段规则按需读取，流程声明头机械跳转 + 四值 blocking 防偷懒（gated 回灌 / audit-required 审计起手清单 / 执行自审 / produced 哈希校验），13 个 Slash Commands 显式入口"
+description: "SDD 开发工作流 v1.0.4 — G 系列全局规则始终加载，§1~§4 阶段规则按需读取，流程声明头机械跳转 + 四值 blocking 防偷懒（gated 回灌 / audit-required 审计起手清单 / 执行自审 / produced 哈希校验），14 个 Slash Commands 显式入口"
 ---
-# SDD Workflow — AI 执行规则 v1.0.3
+# SDD Workflow — AI 执行规则 v1.0.4
 
 > **最高指令**：严禁在未确认变更通道的情况下直接编写或修改生产代码。每次回复优先使用中文。
 >
@@ -48,6 +48,7 @@ description: "SDD 开发工作流 v1.0.3 — G 系列全局规则始终加载，
 4. G 系列章节（G0~G3）常驻 AGENTS.md，不使用声明头；阶段章节（§1~§4）必须带声明头
 5. 字段取值规范：
    - `phase ∈ {init, spec, coding, archive}`；空值统一用 `none`
+   - **`step: {N}/{总数}` 语义**：`总数` = 该 phase-*.md 文件内 §N.N 章节总数（**含横切章节**，如 §1.5、§2.6）；`N` = 该章节在文件内的章节序号，**不代表线性执行路径上的位置**。横切章节（prev/next=none）也占用一个序号，因此线性 `next` 链可能"跳号"（如 §2.5 → §2.7，§2.6 是横切占第 6 号）——这是设计预期，不是断链。执行自审「声明头字段正确」只比对 AI 输出的 step 与 phase-*.md 章节顶部**字面声明**是否一致，不重算线性位置
    - `next` 多分支用 `/` 分隔，条件写括号内
    - `gate ∈ {G1 写码门禁, none}`
    - **`blocking ∈ {true, false, gated, audit-required}`**（四值语义详见下方 G0.5 阶段执行约束）：
@@ -56,16 +57,18 @@ description: "SDD 开发工作流 v1.0.3 — G 系列全局规则始终加载，
      - `gated` — blocking=true 的特化：进入前必须输出「上节产物回灌 + 本节输入承诺」两段；缺回灌 = 视为未进入，执行自审会回滚到上节重做
      - `audit-required` — blocking=true 的特化：进入前必须输出「审计起手清单（≥3 怀疑点 + 验证 + 最低 finding 数）」；不满足 = 视为敷衍，执行自审回滚到本节重做
 6. 其他 AI 工具（Cursor/Copilot 等）只读 AGENTS.md，不消费流程声明；动态加载 + 声明头机制 + 四值 blocking 仅 Claude Code / Codex 启用
-7. **context.md 状态标记规约**：AI 在关键节点追加 `.project/context.md` 记录时，**每条记录必须在末尾标注 `last: §N.N {章节名}`**（或 `last: G0.N` 如果处于全局初始化阶段），用于下次对话 G0.4 状态恢复时精确定位当前所处章节。关键节点包括：§2.1 任务拆分完成 / §2.2 REQ 完成 / §2.3 DES 完成 / §2.4 原型规格完成 / §2.5 评审通过 / §2.6 Spec Sync 完成 / §2.7 功能测试用例设计完成 / §3.0 直通通道完成 / §3.6 审计完成 / §3.7 自测完成 / §3.11 写入 context.md / §4 归档完成。G0.4 状态恢复时，AI 读取 context.md **最后一条记录的 `last` 字段**即可反查阶段文件，无需推理
+7. **context.md 状态标记规约**：AI 在关键节点追加 `.project/context.md` 记录时，**每条记录必须在末尾标注 `last: §N.N {章节名}`**（或 `last: G0.N` 如果处于全局初始化阶段），用于下次对话 G0.4 状态恢复时精确定位当前所处章节。关键节点包括：§2.1 任务拆分完成 / §2.2 REQ 完成 / §2.3 DES 完成 / §2.4 原型规格完成 / §2.5 评审通过 / §2.6 Spec Sync 完成 / §2.7 功能测试用例设计完成 / §3.0 直通通道完成 / §3.6 审计完成 / §3.7 自测完成 / §3.11 写入 context.md / §4 归档完成。G0.4 状态恢复时，AI 读取 context.md **最后一条含 `last:` 的记录的 `last` 字段**即可反查阶段文件（纯 `ref:` E2E 续行跳过，见第 8 条），无需推理
 8. **produced 字段规约**：context.md 记录的格式与解析规约：
 
    **格式（行关系）**：
-   - 一条 context.md 记录 = 1~2 行**连续无空行**的文本
+   - 一条 context.md 记录 = 1~3 行**连续无空行**的文本
    - **第 1 行**末尾必须含 `last: §X.Y {章节名}` 或 `last: G0.N`
    - **第 2 行**（条件性）以 `produced: ` 开头，**紧跟第 1 行**，中间无空行；该 produced 行属于上一条 last 记录
+   - **第 3 行**（条件性，仅 §4 归档记录的 E2E 附加验收用）以 `ref: ` 开头，**紧跟所属记录**（无空行），属于上一条 last 记录的附加痕迹（详见下方「E2E 附加验收」）
    - 跨记录之间用 1 个空行隔开
+   - **`last:` 字段定位规则**：G0.4 状态恢复 / 跨对话执行自审「last 字段存在」校验时，扫描 **context.md 最后一条含 `last:` 的记录**；纯 `ref:` 续行不构成独立记录，不参与 last 定位，不会导致「context.md 格式异常」误判
    
-   **强制范围**：produced 字段**仅以下 3 个章节强制**写入：
+   **强制范围**：produced 字段**仅以下 3 个主流程章节强制**写入：
    | 章节 | blocking | 产物 |
    |---|---|---|
    | §2.4 原型生成 | true | `.project/specs/master/prototypes/{模块编号}-{模块名}/prototype-spec.md` |
@@ -73,6 +76,20 @@ description: "SDD 开发工作流 v1.0.3 — G 系列全局规则始终加载，
    | §3.7 开发自测 | gated | `.outdocs/unit-test-report.md#{锚点-slug}` |
    
    其他章节（§1.1 / §1.2 / §2.1 / §2.2 / §2.3 / §2.7 / §3.3 / §3.4 / §3.5 / §3.11 / §4 等）**blocking=true 但豁免 produced**——其产物语义不是单一可锚定的文件（如 §3.5 是 git diff、§2.1 是 task.md + index.md 双产物）；这些章节的完整性靠各自的章节正文规约 + G1 写码门禁 + §4 归档检查兜底。
+
+   **E2E 附加验收**（最高优先级约束，phase-archive.md / sdd-e2e-test.md 必须遵守本条）：
+
+   E2E 是**附加验收功能**，不属于 SDD 主流程状态机。无论单模块 / 多模块 / 连续模式 / 逐个确认模式，**E2E 只能在所有 dev-order 模块全部归档完成后执行**，且**绝不影响、不阻塞、不改写任何主流程章节状态**。落地规约：
+
+   - **不新增独立 context.md 记录**：E2E 完成 / SKIP **不写新的 `last:` 行**，不臆造「§4 E2E 测试」这种伪章节状态
+   - **不写 `produced:`**：E2E 报告不纳入 produced 强制范围，不参与哈希校验、不参与执行自审回滚
+   - **只追加 `ref:` 续行**：E2E 痕迹作为**第 3 行 `ref:` 续行**，紧跟「§4 归档通用动作」写入的那条 `last: §4 归档` 记录之后（无空行）。该记录始终是 context.md 最后一条带 `last:` 的记录，跨对话 G0.4 / 执行自审据此定位，E2E 不干扰状态机
+   - **`ref:` 续行格式**：
+     ```
+     ref: e2e {结论 PASS/PARTIAL/SKIP/FAIL} {.outdocs/e2e-report.md 或 "未生成"} ({日期}; {N通过/N失败/N跳过/N阻塞 或 SKIP原因})
+     ```
+   - **执行自审豁免**：`ref:` 续行不是「产物」，跨对话 / 单会话执行自审均**跳过对 `ref:` 的存在性 / 哈希 / 锚点校验**；E2E 报告文件丢失或被改不触发任何回滚
+   - **独立重跑（/sdd-e2e-test）**：若全部模块尚未归档（last 不在 §4 归档），E2E **只能作为独立参考执行**，不写 context.md 任何 `last:` / `produced:` / `ref:`，仅生成报告（详见 sdd-e2e-test.md 阶段冲突保护）
    
    **格式（共用）**：
    ```
@@ -151,7 +168,7 @@ description: "SDD 开发工作流 v1.0.3 — G 系列全局规则始终加载，
 
 「执行自审」是反偷懒校验的统一机制，**在两个触发点都要执行**：
 
-1. **跨对话开局触发**（仅后续路径）：G0.0 预处理完成后，扫描 context.md **最后一条记录**，校验上次会话最后一节是否完整
+1. **跨对话开局触发**（仅后续路径）：G0.0 预处理完成后，扫描 context.md **最后一条含 `last:` 的记录**（纯 `ref:` E2E 续行不构成记录，跳过），校验上次会话最后一节是否完整
 2. **单会话每节进入前触发**（每次进入新 §N.N 章节前）：扫描**当前回答**中上一节的可见凭证，校验上节是否完整
 
 两个触发点共用同一套校验表 + 输出格式 + 处理规则。
@@ -160,10 +177,10 @@ description: "SDD 开发工作流 v1.0.3 — G 系列全局规则始终加载，
 
 | 检查项 | 适用范围 | 通过条件 | 不通过处理 |
 |---|---|---|---|
-| `last` 字段存在 | 跨对话 | 最后一条记录末尾含 `last: §N.N` 或 `last: G0.N` | 缺失 → 触发 G2 停车「context.md 格式异常」，三选一：A 按 `/sdd-start` 场景 D 流程恢复 / B 用户手动指定当前章节后继续 / C 取消 |
+| `last` 字段存在 | 跨对话 | **最后一条含 `last:` 的记录**末尾含 `last: §N.N` 或 `last: G0.N`（纯 `ref:` E2E 续行跳过，不算缺失） | 全文件无任何 `last:` → 触发 G2 停车「context.md 格式异常」，三选一：A 按 `/sdd-start` 场景 D 流程恢复 / B 用户手动指定当前章节后继续 / C 取消 |
 | 声明头存在 | 单会话 | 上节回答含 `【进入 §X.Y】` 标识 + 6 字段流程声明头 | 视为违反 G2 "路由不确定"，回滚到 §X.Y 重做 |
 | 声明头字段正确 | 单会话 | 6 字段值与 phase-*.md 真实定义一致 | Read phase-*.md 后修正 |
-| produced 字段（仅 §2.4 / §3.6 / §3.7 三个章节强制；其他 blocking 章节豁免，见第 8 条规约）| 两者 | 记录含 `produced: <路径>[#锚点] <hash>` | 缺 produced → **辅助判定**：若产物文件存在且含本模块本日的锚点 → 提示用户「产物存在但 produced 缺失，三选一：A 补写 produced 后继续 / B 重做该节 / C 触发 G2 停车，由用户进一步说明原因或选择处理方式」；否则视为该节未完成，回滚 |
+| produced 字段（仅 §2.4 / §3.6 / §3.7 三个主流程章节强制；其他 blocking 章节豁免，见第 8 条规约）| 两者 | 记录含 `produced: <路径>[#锚点] <hash>` | 缺 produced → **辅助判定**：若产物文件存在且含本模块本日的锚点 → 提示用户「产物存在但 produced 缺失，三选一：A 补写 produced 后继续 / B 重做该节 / C 触发 G2 停车，由用户进一步说明原因或选择处理方式」；否则视为该节未完成，回滚 |
 | 产物文件存在 | 两者 | `ls <路径>` 成功 | 文件缺失 = 伪造产物，回滚到该节重做 |
 | 哈希一致 | 跨对话 | `shasum -a 256 <文件> \| cut -c1-8` = produced 记录值 | 不一致 = 产物被外部改动或当时未真写入，回滚（外部改动场景由用户判定是接受新版本还是回滚）|
 | 锚点存在（含 #锚点-slug 时）| 两者 | `grep -F '<二级标题文本>' <文件>` 命中 | 锚点缺失 = 章节内容缺失，回滚 |
@@ -218,7 +235,7 @@ description: "SDD 开发工作流 v1.0.3 — G 系列全局规则始终加载，
 
 **与 G2 停车信号的关系**：执行自审 = 入口检查 + 出口审计 + 跨对话校验三合一；G2 停车信号是 5 类"中途异常"。两者互补，前者管"流程合规性"，后者管"业务异常"。
 
-> **Slash 命令豁免**：当用户首条消息是 slash 命令（`/sdd-init` / `/sdd-start` / `/sdd-prd-change` / `/sdd-bug-fix` / `/sdd-prd-audit` / `/sdd-front-context` / `/sdd-back-context` / `/sdd-frontend-standards` / `/sdd-java-create` / `/sdd-wap-create` / `/sdd-reverse-scan` / `/sdd-test-case` / `/sdd-unit-test` 任意一个）时：
+> **Slash 命令豁免**：当用户首条消息是 slash 命令（`/sdd-init` / `/sdd-start` / `/sdd-prd-change` / `/sdd-bug-fix` / `/sdd-prd-audit` / `/sdd-front-context` / `/sdd-back-context` / `/sdd-frontend-standards` / `/sdd-java-create` / `/sdd-wap-create` / `/sdd-reverse-scan` / `/sdd-test-case` / `/sdd-unit-test` / `/sdd-e2e-test` 任意一个）时：
 > - **G0.0 不强制**走 G0 路径，由命令体自己负责前置检查和阶段路由
 > - 命令体内部仍受 G0.5 阶段执行约束 + Skill 调用强制约束（见下方）
 > - 此豁免**仅对 slash 命令直接触发**生效；用户用自然语言（"启动工作流"等）触发 G0 时不豁免
@@ -303,13 +320,14 @@ AI 根据「待处理输入」是否含项目特征，分两种模式输出：
 .project/specs/rules/
 .project/changelog/
 .test/                                    ← 测试产出根目录（独立于 .project）
+.test/.test-env.md                       ← 测试运行环境声明（§2.7 / §3.7.1 生成；§4 E2E 缺失时可创建/补全）
 .test/testcases/                          ← §2.7 功能测试用例
 .test/unit/                               ← §3.7 单元测试
 .outdocs/
 .agents/skills/
 ```
 
-> **`.test-env.md` 不在 G0.2 生成**：测试环境配置文件由 §2.7 / §3.7.1 首次进入时**按需生成 + 自动扫描项目实际配置补全**，避免启动时无谓扫描。详见 phase-spec.md §2.7 / phase-coding.md §3.7.1 的「`.test-env.md` 按需生成 + 自动检测」段。
+> **`.test/.test-env.md` 不在 G0.2 生成**：测试环境配置文件由 §2.7 / §3.7.1 首次进入时**按需生成 + 自动扫描项目实际配置补全**；若前序未生成，§4 E2E 可创建/补全安全默认字段后读取 `e2e.*` / `vars.*` / `selectors.*`。详见 phase-spec.md §2.7 / phase-coding.md §3.7.1 的「`.test/.test-env.md` 按需生成 + 自动检测」段。
 
 **G0.3 文档补充确认**（已存在则跳过）：
 
@@ -341,7 +359,7 @@ AI 根据「待处理输入」是否含项目特征，分两种模式输出：
 
 **G0.4 状态恢复**：读取以下文件恢复状态：
 
-- `.project/context.md` — 恢复工作进度。**读取最后一条记录的 `last: §N.N` 字段**作为当前章节位置（规约见本节第 7 条）；若 `last` 字段不存在 → 触发 G2 停车「context.md 格式异常」，三选一：A 按 `/sdd-start` 场景 D 流程恢复 / B 用户手动指定当前章节后继续 / C 取消
+- `.project/context.md` — 恢复工作进度。**读取最后一条含 `last:` 的记录的 `last: §N.N` 字段**作为当前章节位置（规约见本节第 7、8 条；纯 `ref:` E2E 续行跳过）；若全文件无任何 `last:` 字段 → 触发 G2 停车「context.md 格式异常」，三选一：A 按 `/sdd-start` 场景 D 流程恢复 / B 用户手动指定当前章节后继续 / C 取消
 - `.project/task.md` — 恢复子任务进度（如存在）
 - `.project/specs/rules/project-profile.md` — 恢复项目级认知（铁律/技术栈/外部依赖/业务架构）
 - `.project/specs/rules/frontend-context.md` — 恢复前端规范（如存在）
@@ -584,7 +602,7 @@ AI 根据用户**首条消息**推断当前意图，**直接执行，不等待�
 | `rules/phase-archive.md` | **§4 归档** | 模块编码完成后 |
 | `rules/quality-standards.md` | 审计标准（PRD/REQ/DES/代码/自测） | 执行审计时 |
 | `rules/skill-routing.md` | Skill 路由表 + 安装/执行流程 | 需要安装或调用 Skill 时 |
-| `rules/slash-commands.md` | **Slash Commands 详细路由**（4 流程触发 + 9 工具触发 + 流程冲突保护两类）| 用户触发 `/sdd-*` 命令或 AI 决定如何路由命令时 |
+| `rules/slash-commands.md` | **Slash Commands 详细路由**（4 流程触发 + 10 工具触发 + 流程冲突保护两类）| 用户触发 `/sdd-*` 命令或 AI 决定如何路由命令时 |
 | `rules/project-structure.md` | **.project 完整目录树状结构图**（含每个文件 + 注释）| 用户询问目录结构 / AI 需追溯具体路径时 |
 | `rules/fallback/frontend-scan.md` | 前端内置扫描（兜底） | 前端 context skill 不可用时 |
 | `rules/fallback/backend-scan.md` | 后端内置扫描（兜底） | 后端 context skill 不可用时 |
@@ -595,7 +613,7 @@ AI 根据用户**首条消息**推断当前意图，**直接执行，不等待�
 
 ## Slash Commands 入口（概览，详细路由按需 Read）
 
-13 个命令，命令文件位于 `{SKILL_DIR}/.claude/commands/`，由 `/sdd-init` 安装到用户级或项目级。
+14 个命令，命令文件位于 `{SKILL_DIR}/.claude/commands/`，由 `/sdd-init` 安装到用户级或项目级。
 
 | 类型 | 命令 | 简述 |
 |---|---|---|
@@ -603,7 +621,7 @@ AI 根据用户**首条消息**推断当前意图，**直接执行，不等待�
 | | `/sdd-start` | G0 对话初始化（四场景路由）|
 | | `/sdd-prd-change` | §2.6 Spec Sync `[prd]` 入口 |
 | | `/sdd-bug-fix` | G0.4.1 当前需求 bug 二次判定 → §3.0 回环 |
-| **工具触发**（9 个）| `/sdd-prd-audit` | §1.1 / §1.2(feature) / §2.6[prd] PRD 审计 |
+| **工具触发**（10 个）| `/sdd-prd-audit` | §1.1 / §1.2(feature) / §2.6[prd] PRD 审计 |
 | | `/sdd-front-context` | §1.3 前端规范提取 |
 | | `/sdd-back-context` | §1.3 后端规范提取 |
 | | `/sdd-frontend-standards` | §3.5 前端代码变更规范 |
@@ -612,10 +630,11 @@ AI 根据用户**首条消息**推断当前意图，**直接执行，不等待�
 | | `/sdd-reverse-scan` | §1.4 深度业务代码扫描 |
 | | `/sdd-test-case` | §2.7 功能测试用例设计 |
 | | `/sdd-unit-test` | §3.7.1 自动化单测 |
+| | `/sdd-e2e-test` | §4 全部模块归档后 E2E 测试 |
 
 > **G0.0 豁免规则**：slash 命令首条触发时 G0.0 不强制走 G0 路径，由命令体自有路由处理；自然语言触发不豁免。命令体内进入 §X.Y 仍受 G0.5 阶段执行约束 + Skill 调用强制约束。
 
-> **详细路由 + 流程冲突保护**：AI 需要决定如何路由 `/sdd-*` 命令时，**Read `{SKILL_DIR}/rules/slash-commands.md`**——含完整路由表（4 流程 + 9 工具）、流程冲突保护两类（阶段冲突 / 产出物冲突）+ 各命令体行为细则。命令体本身见 `{SKILL_DIR}/.claude/commands/sdd-*.md`。
+> **详细路由 + 流程冲突保护**：AI 需要决定如何路由 `/sdd-*` 命令时，**Read `{SKILL_DIR}/rules/slash-commands.md`**——含完整路由表（4 流程 + 10 工具）、流程冲突保护两类（阶段冲突 / 产出物冲突）+ 各命令体行为细则。命令体本身见 `{SKILL_DIR}/.claude/commands/sdd-*.md`。
 
 ---
 
@@ -625,7 +644,7 @@ AI 根据用户**首条消息**推断当前意图，**直接执行，不等待�
 |---|---|
 | `.project/` | 项目管理：`context.md`（每次对话必读）、`task.md`（子任务）、`specs/master/`（REQ/DES/index/prototypes）、`specs/rules/`（profile + context）、`changelog/`、`reverse-scan/`（可选）|
 | `.docs/` | 用户文档：`prd/`（PRD + prototype/ui/ui-spec 子目录）、`tech/`（技术文档）|
-| `.test-env.md` | 测试运行环境（§2.7 / §3.7.1 首次进入时按需生成 + 扫描项目配置补全）|
+| `.test/.test-env.md` | 测试运行环境（§2.7 / §3.7.1 生成；§4 E2E 缺失时可创建/补全并读取 e2e.* / vars.* / selectors.*）|
 | `.test/` | 测试产出：`testcases/`（TC-F + CSV）、`unit/`（UT + skeleton + report）|
 | `.outdocs/` | 交付文档：project-overview / api-doc / audit-report / unit-test-report / task-report / prd-change-log |
 | `.agents/skills/` | ny-sdd-workflow 安装目录（子 Skill 内置在 tools/ 下）|
@@ -707,4 +726,3 @@ AI 根据用户**首条消息**推断当前意图，**直接执行，不等待�
 | 兜底（Skill 缺失时） | `quality-standards.md` 或 `rules/fallback/*.md` | 内置兜底规则的详细描述 |
 
 > 这些场景速查表无法承载完整规则，**Read 不可省**。AI 必须在执行该场景时显式 Read 对应文件。
-
