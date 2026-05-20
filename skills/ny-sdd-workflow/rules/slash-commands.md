@@ -1,6 +1,6 @@
 # Slash Commands 详细路由
 
-> 本文件是 SDD Workflow 13 个 Slash Commands 的**详细路由表 + 流程冲突保护**。AGENTS.md 仅保留 13 个命令名概览，详细路由在此。
+> 本文件是 SDD Workflow 14 个 Slash Commands 的**详细路由表 + 流程冲突保护**。AGENTS.md 仅保留 14 个命令名概览，详细路由在此。
 >
 > AI 按需读取：用户触发 `/sdd-*` 命令或 AI 需要决定如何路由时 Read 本文件。
 
@@ -17,7 +17,7 @@
 | `/sdd-prd-change` | §2.6 Spec Sync `[prd]` | 读取 `{SKILL_DIR}/rules/phase-spec.md` §2.6，按 Step1~6 完整执行；结束后按倒数第二条 last 返回原阶段 |
 | `/sdd-bug-fix` | G0.4.1 当前需求 bug 二次判定 → §3.0 bug 修复回环 | 按 G0.4.1 二次判定表分流；判定为当前需求 bug → §3.0 通道判断；不归属或不确定 → G2 停车三选一 |
 
-## 工具触发类（9 个，按统一 Skill 执行流程）
+## 工具触发类（10 个，按统一 Skill 执行流程）
 
 | 命令 | 对应 Skill | 绑定阶段 | 执行流程 |
 |---|---|---|---|
@@ -30,8 +30,9 @@
 | `/sdd-reverse-scan` | `tools/reverse-scan/` | §1.4 深度业务代码扫描 | 同上；产出在 `.project/reverse-scan/`；AI 执行合并到 profile/overview/api-doc/context |
 | `/sdd-test-case` | `tools/test-case-design/` | §2.7 功能测试用例设计 | 同上；自动注入 SDD 模式参数（task_type/output_dir/csv_template） |
 | `/sdd-unit-test` | `tools/unit-test-generator/` | §3.7.1 自动化单测 | 同上；自主设计模式；自动注入 frameworks/exec_mode；前置清理 generated/ 残留 |
+| `/sdd-e2e-test` | `tools/e2e-test-runner/` | §4 全部模块归档后 E2E 测试 | 同上；Playwright only；产出 `.outdocs/e2e-report.md` + `.outdocs/e2e-report.html` |
 
-## 流程冲突保护（仅适用 9 个工具触发类命令）
+## 流程冲突保护（仅适用 10 个工具触发类命令）
 
 > **流程触发类（4 个）各自有自有机制，不复用本模板：**
 > - `/sdd-init`：基础设施操作，不绑定阶段，无冲突场景
@@ -39,7 +40,7 @@
 > - `/sdd-prd-change`：前置检查（无 AGENTS.md/无 context.md → 退出） + 严格按 §2.6 流程
 > - `/sdd-bug-fix`：前置检查 + G0.4.1 二次判定 + G2 停车三选一（A 走回环 / B 走新 bug 工单 / C 取消）
 
-下述两类冲突保护仅适用工具触发类命令（`/sdd-prd-audit` / `/sdd-front-context` / `/sdd-back-context` / `/sdd-frontend-standards` / `/sdd-java-create` / `/sdd-wap-create` / `/sdd-reverse-scan` / `/sdd-test-case` / `/sdd-unit-test`）。
+下述两类冲突保护仅适用工具触发类命令（`/sdd-prd-audit` / `/sdd-front-context` / `/sdd-back-context` / `/sdd-frontend-standards` / `/sdd-java-create` / `/sdd-wap-create` / `/sdd-reverse-scan` / `/sdd-test-case` / `/sdd-unit-test` / `/sdd-e2e-test`）。
 
 实际有**两类**冲突场景，AI 按场景使用对应模板：
 

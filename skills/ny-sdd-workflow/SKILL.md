@@ -1,11 +1,11 @@
 ---
 name: ny-sdd-workflow
 description: >
-  安装 SDD Workflow v1.0.3 开发工作流到项目中。自动解析 skill 安装路径，生成 AGENTS.md（核心规则 + 路径已烧录），
+  安装 SDD Workflow v1.0.4 开发工作流到项目中。自动解析 skill 安装路径，生成 AGENTS.md（核心规则 + 路径已烧录），
   同时生成 CLAUDE.md（symlink → AGENTS.md，Claude Code 自动读取），
   阶段规则文件（rules/）保留在 skill 目录按需读取，并可选同步到其他 AI 工具。
 
-  **架构**：G 系列全局规则 + §1~§4 阶段编号 + 流程声明头机制（含**四值 blocking** true/false/gated/audit-required）+ 动态加载 + **执行自审统一机制**（跨对话开局 + 单会话每节进入两个触发点）+ **context.md `produced` 字段**（产物路径 + 锚点 + SHA-256 前 8 位，仅 §2.4 / §3.6 / §3.7 三章强制）+ **审计起手清单**（§3.6 进入时 ≥3 怀疑点 + 验证）+ **上节产物回灌**（§2.5 / §3.7 / §3.8 进入时 cat 上节产物 + 哈希校验）+ 13 个 Slash Commands，兼容多 AI 工具。
+  **架构**：G 系列全局规则 + §1~§4 阶段编号 + 流程声明头机制（含**四值 blocking** true/false/gated/audit-required）+ 动态加载 + **执行自审统一机制**（跨对话开局 + 单会话每节进入两个触发点）+ **context.md `produced` 字段**（产物路径 + 锚点 + SHA-256 前 8 位，仅 §2.4 / §3.6 / §3.7 三个主流程章节强制）+ **审计起手清单**（§3.6 进入时 ≥3 怀疑点 + 验证）+ **上节产物回灌**（§2.5 / §3.7 / §3.8 进入时 cat 上节产物 + 哈希校验）+ 14 个 Slash Commands，兼容多 AI 工具。
 
   **必须在以下场景触发：**
   - 用户说"安装 SDD"、"安装 AGENTS"、"安装 AI 工作流"、"配置开发规范"
@@ -23,7 +23,7 @@ description: >
 
 # SDD Workflow 初始化 Skill
 
-本 skill 将 SDD Workflow v1.0.3 安装到当前项目，自动适配多 AI 工具。
+本 skill 将 SDD Workflow v1.0.4 安装到当前项目，自动适配多 AI 工具。
 
 ## 安装过程多轮交互处理
 
@@ -122,7 +122,7 @@ AI 必须在本次会话内**记忆**此 entry_type 直到 Step 7，作为路由
    [ -f "$HOME/.claude/skills/ny-sdd-workflow/SKILL.md" ]
    ```
    - ✅ 通过 → 使用**完整展开的绝对路径**（用 `echo $HOME` 获取，禁止 `~`）
-   - ❌ 不通过 → 报错并退出：「Skill 未正确安装：本地 `.agents/skills/ny-sdd-workflow/` 与全局 `~/.claude/skills/ny-sdd-workflow/` 均无 SKILL.md。请先运行 `npx skills add https://git.nykjsrv.cn/ai-coding/skills.git --skill ny-sdd-workflow --yes` 完成安装」
+   - ❌ 不通过 → 报错并退出：「Skill 未正确安装：本地 `.agents/skills/ny-sdd-workflow/` 与全局 `~/.claude/skills/ny-sdd-workflow/` 均无 SKILL.md。请先运行 `npx skills add https://github.com/91160/skills.git --skill ny-sdd-workflow --yes` 完成安装」
 
 3. **空骨架告知（不删除）**：若第 1 步检测到本地路径**目录存在但 SKILL.md 缺失**（明确判定为空骨架），在 Step 6 初始化报告中追加一行提示：
    ```
@@ -221,7 +221,7 @@ mkdir -p .continue/rules && [ ! -e .continue/rules/ny-sdd-workflow.md ] && ln -s
   · 项目本地安装 → B（项目级）
 ```
 
-用户选择后，对 13 个命令文件创建 symlink（Windows 兜底为 `cp`）：
+用户选择后，对 14 个命令文件创建 symlink（Windows 兜底为 `cp`）：
 
 > **AI 执行前**：将下方 bash 脚本中的 `{SKILL_DIR}` 替换为 Step 1 确定的实际路径（绝对路径或相对路径，与 AGENTS.md 中烧录的值一致）。
 
@@ -251,16 +251,16 @@ fi
 - A 选项：若 `~/.claude/commands/sdd-*.md` 已部分/全部存在 → 询问「检测到部分命令已存在（可能其他项目已安装），是否覆盖？」
 - B 选项：若 `.claude/commands/sdd-*.md` 已存在且非 symlink → 跳过该文件并提示
 
-**Slash Commands 清单**（13 个）：
+**Slash Commands 清单**（14 个）：
 - 流程触发类（4 个）：`sdd-init` / `sdd-start` / `sdd-prd-change` / `sdd-bug-fix`
-- 工具触发类（9 个）：`sdd-prd-audit` / `sdd-front-context` / `sdd-back-context` / `sdd-frontend-standards` / `sdd-java-create` / `sdd-wap-create` / `sdd-reverse-scan` / `sdd-test-case` / `sdd-unit-test`
+- 工具触发类（10 个）：`sdd-prd-audit` / `sdd-front-context` / `sdd-back-context` / `sdd-frontend-standards` / `sdd-java-create` / `sdd-wap-create` / `sdd-reverse-scan` / `sdd-test-case` / `sdd-unit-test` / `sdd-e2e-test`
 
 **⚠️ 重启提示**（创建 symlink 后必须明确告知用户）：
 
 Slash 命令安装完成后，AI **必须立即输出以下提示**：
 
 ```
-⚠️ Slash 命令 symlink 已创建（13 个）
+⚠️ Slash 命令 symlink 已创建（14 个）
    Claude Code 启动时缓存了命令列表，新装命令需**重启 Claude Code** 后才能识别。
 
    重启前可用自然语言获得同等效果，例如：
@@ -269,16 +269,19 @@ Slash 命令安装完成后，AI **必须立即输出以下提示**：
    · "修复 bug" = /sdd-bug-fix
    · "生成功能测试用例" = /sdd-test-case
    · "生成单元测试" = /sdd-unit-test
-   （完整 13 个命令 + 详细路由见 {SKILL_DIR}/rules/slash-commands.md）
+   （完整 14 个命令 + 详细路由见 {SKILL_DIR}/rules/slash-commands.md）
 ```
 
 **Step 5：输出 .gitignore 建议**（仅在创建了 symlink 时提示）
 
 ```
-# SDD Workflow symlink（由 ny-sdd-workflow skill 生成，不提交）
-.cursorrules
+# SDD Workflow 各 AI 工具 symlink（由 ny-sdd-workflow skill 生成，按团队约定决定是否提交）
+.cursor/rules/ny-sdd-workflow.md
+.github/copilot-instructions.md
 .clinerules
 .windsurfrules
+.augment/rules/ny-sdd-workflow.md
+.continue/rules/ny-sdd-workflow.md
 # 项目级 slash commands（如选择策略 B）— 是否提交按团队约定
 # .claude/commands/sdd-*.md
 # AGENTS.md 需要提交（源文件）
@@ -289,7 +292,7 @@ Slash 命令安装完成后，AI **必须立即输出以下提示**：
 报告头部共用，**"下一步"段按 Step 0 检测的 entry_type 分支**：
 
 ```
-【SDD Workflow v1.0.3 安装完成】
+【SDD Workflow v1.0.4 安装完成】
 
 ✅ AGENTS.md（核心规则 G0~G3 + 编号流程规约，始终加载）
 ✅ CLAUDE.md → AGENTS.md（symlink，Claude Code 自动读取）
@@ -300,7 +303,7 @@ Slash 命令安装完成后，AI **必须立即输出以下提示**：
 ✅ Slash Commands（{用户级 ~/.claude/commands/ / 项目级 .claude/commands/ / 已跳过}）
    - 流程：/sdd-init /sdd-start /sdd-prd-change /sdd-bug-fix
    - 工具：/sdd-prd-audit /sdd-front-context /sdd-back-context /sdd-frontend-standards
-           /sdd-java-create /sdd-wap-create /sdd-reverse-scan /sdd-test-case /sdd-unit-test
+           /sdd-java-create /sdd-wap-create /sdd-reverse-scan /sdd-test-case /sdd-unit-test /sdd-e2e-test
 
 入口来源：{install / develop / ambiguous}
 ```
@@ -361,7 +364,7 @@ Slash 命令安装完成后，AI **必须立即输出以下提示**：
 4. **Slash Commands 同步**：检查 `~/.claude/commands/` 与 `.claude/commands/` 中的 `sdd-*.md` symlink 是否完整：
    - 若已有 symlink → 自动同步到最新版本（symlink 指向 skill 源文件，无需重建）
    - 若部分缺失 → 询问用户是否补齐（默认推荐补齐）
-5. 提示：「AGENTS.md 已更新到 v1.0.3，旧版已备份为 AGENTS.md.bak。CLAUDE.md (symlink) 自动同步，Windows 需重新复制。其他工具 symlink 自动同步所有工具与 slash commands」
+5. 提示：「AGENTS.md 已更新到 v1.0.4，旧版已备份为 AGENTS.md.bak。CLAUDE.md (symlink) 自动同步，Windows 需重新复制。其他工具 symlink 自动同步所有工具与 slash commands」
 
 ### C. 查看状态
 
@@ -392,7 +395,7 @@ done
 
 echo ""
 echo "=== Slash Commands ==="
-COMMANDS=(sdd-init sdd-start sdd-prd-change sdd-bug-fix sdd-prd-audit sdd-front-context sdd-back-context sdd-frontend-standards sdd-java-create sdd-wap-create sdd-reverse-scan sdd-test-case sdd-unit-test)
+COMMANDS=(sdd-init sdd-start sdd-prd-change sdd-bug-fix sdd-prd-audit sdd-front-context sdd-back-context sdd-frontend-standards sdd-java-create sdd-wap-create sdd-reverse-scan sdd-test-case sdd-unit-test sdd-e2e-test)
 echo "[用户级 ~/.claude/commands/]"
 for c in "${COMMANDS[@]}"; do
   f="$HOME/.claude/commands/$c.md"
@@ -420,7 +423,7 @@ for f in .cursor/rules/ny-sdd-workflow.md .github/copilot-instructions.md .cline
 done
 
 # 2. 项目级 Slash Commands（默认随 AGENTS.md 卸载一起清理）
-COMMANDS=(sdd-init sdd-start sdd-prd-change sdd-bug-fix sdd-prd-audit sdd-front-context sdd-back-context sdd-frontend-standards sdd-java-create sdd-wap-create sdd-reverse-scan sdd-test-case sdd-unit-test)
+COMMANDS=(sdd-init sdd-start sdd-prd-change sdd-bug-fix sdd-prd-audit sdd-front-context sdd-back-context sdd-frontend-standards sdd-java-create sdd-wap-create sdd-reverse-scan sdd-test-case sdd-unit-test sdd-e2e-test)
 for c in "${COMMANDS[@]}"; do
   f=".claude/commands/$c.md"
   [ -L "$f" ] && rm "$f" && echo "🗑 $f"

@@ -3,7 +3,7 @@
 const fs = require('fs')
 const path = require('path')
 
-const VERSION = '1.0.2'
+const VERSION = '1.0.4'
 const AGENTS_FILE = path.resolve('AGENTS.md')
 const CLAUDE_FILE = path.resolve('CLAUDE.md')
 const TEMPLATE = path.join(__dirname, '..', 'templates', 'AGENTS.md')
@@ -19,11 +19,11 @@ const TOOL_LINKS = [
   { path: '.continue/rules/ny-sdd-workflow.md', tool: 'Continue' },
 ]
 
-// 13 个 Slash Commands 列表
+// 14 个 Slash Commands 列表
 const COMMANDS = [
   'sdd-init', 'sdd-start', 'sdd-prd-change', 'sdd-bug-fix',
   'sdd-prd-audit', 'sdd-front-context', 'sdd-back-context', 'sdd-frontend-standards',
-  'sdd-java-create', 'sdd-wap-create', 'sdd-reverse-scan', 'sdd-test-case', 'sdd-unit-test',
+  'sdd-java-create', 'sdd-wap-create', 'sdd-reverse-scan', 'sdd-test-case', 'sdd-unit-test', 'sdd-e2e-test',
 ]
 
 // Slash Commands 源目录（在 skill 包内）
@@ -130,7 +130,7 @@ function getCommandsTargetDir(target) {
 }
 
 /**
- * 安装 13 个 Slash Commands 到指定目标
+ * 安装 14 个 Slash Commands 到指定目标
  * 返回 { created, exists, skipped, missingSrc }
  */
 function installCommands(target) {
@@ -184,7 +184,7 @@ function installCommands(target) {
 }
 
 /**
- * 清理 13 个 Slash Commands symlink
+ * 清理 14 个 Slash Commands symlink
  */
 function removeCommands(target) {
   const targetDir = getCommandsTargetDir(target)
@@ -337,10 +337,11 @@ function init() {
   if (createdCount > 0) {
     console.log('')
     console.log(bold('  .gitignore 建议：\n'))
-    console.log(gray('  # SDD Workflow symlink（不提交）'))
-    console.log(gray('  .cursorrules'))
-    console.log(gray('  .clinerules'))
-    console.log(gray('  .windsurfrules'))
+    console.log(gray('  # SDD Workflow 各 AI 工具 symlink（指向 AGENTS.md，按团队约定决定是否提交）'))
+    for (const { path: targetPath } of TOOL_LINKS) {
+      console.log(gray(`  ${targetPath}`))
+    }
+    console.log(gray('  # AGENTS.md 与 CLAUDE.md 为源文件，需要提交'))
   }
 
   // 7. 完成
@@ -363,10 +364,10 @@ function init() {
     console.log('')
     console.log(gray(`  完成：新建 ${stats.created} | 已存在 ${stats.exists} | 跳过 ${stats.skipped}`))
   } else if (commandsArg === 'skip') {
-    console.log(bold('  Slash Commands（13 个）：') + gray(' 已通过 --commands=skip 跳过'))
+    console.log(bold('  Slash Commands（14 个）：') + gray(' 已通过 --commands=skip 跳过'))
   } else {
     // 未传 --commands，输出引导提示（保持向后兼容）
-    console.log(bold('  Slash Commands（13 个）：'))
+    console.log(bold('  Slash Commands（14 个）：'))
     console.log(gray('  · 本次未安装命令（未传 --commands 参数）'))
     console.log(gray('  · 一键安装到用户级（推荐，所有项目可见）：'))
     console.log(gray('      node <SDD_DIR>/bin/cli.js init --tools=A --commands=user'))
@@ -375,7 +376,7 @@ function init() {
     console.log(gray('  · 或在 AI 对话中说"安装 SDD"由 AI 询问安装位置'))
     console.log(gray('  · 流程命令：/sdd-init /sdd-start /sdd-prd-change /sdd-bug-fix'))
     console.log(gray('  · 工具命令：/sdd-prd-audit /sdd-front-context /sdd-back-context /sdd-frontend-standards'))
-    console.log(gray('              /sdd-java-create /sdd-wap-create /sdd-reverse-scan /sdd-test-case /sdd-unit-test'))
+    console.log(gray('              /sdd-java-create /sdd-wap-create /sdd-reverse-scan /sdd-test-case /sdd-unit-test /sdd-e2e-test'))
   }
 
   console.log('')
@@ -561,8 +562,9 @@ function status() {
     if (fs.existsSync(userPath) && fs.lstatSync(userPath).isSymbolicLink()) userCount++
     if (fs.existsSync(projPath) && fs.lstatSync(projPath).isSymbolicLink()) projectCount++
   }
-  console.log(`  · 用户级 (~/.claude/commands/)  ${userCount === 13 ? green('✅ 全部已安装 (13/13)') : userCount === 0 ? yellow('❌ 未安装') : yellow(`⚠ 部分安装 (${userCount}/13)`)}`)
-  console.log(`  · 项目级 (.claude/commands/)   ${projectCount === 13 ? green('✅ 全部已安装 (13/13)') : projectCount === 0 ? yellow('❌ 未安装') : yellow(`⚠ 部分安装 (${projectCount}/13)`)}`)
+  const cmdTotal = COMMANDS.length
+  console.log(`  · 用户级 (~/.claude/commands/)  ${userCount === cmdTotal ? green(`✅ 全部已安装 (${cmdTotal}/${cmdTotal})`) : userCount === 0 ? yellow('❌ 未安装') : yellow(`⚠ 部分安装 (${userCount}/${cmdTotal})`)}`)
+  console.log(`  · 项目级 (.claude/commands/)   ${projectCount === cmdTotal ? green(`✅ 全部已安装 (${cmdTotal}/${cmdTotal})`) : projectCount === 0 ? yellow('❌ 未安装') : yellow(`⚠ 部分安装 (${projectCount}/${cmdTotal})`)}`)
   if (userCount === 0 && projectCount === 0) {
     console.log(gray('  运行 node <SDD_DIR>/bin/cli.js init --commands=user 安装到用户级'))
     console.log(gray('  或在 AI 对话中说"安装 SDD"由 AI 询问安装位置'))

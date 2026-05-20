@@ -470,6 +470,8 @@ produced: .project/specs/master/prototypes/{模块编号}-{模块名}/prototype-
 
 ## §2.7 功能测试用例设计（feature/bug/refactor 均执行）
 
+> **章节顺序说明**：本文件中 §2.7 物理上排在 §2.6 之前。§2.6 Spec Sync 是**横切章节**（prev/next=none，可在 §1~§4 任意触发），故放在线性链末尾；线性主链是 §2.1→§2.2→§2.3→§2.4→§2.5→§2.7→§3.0，**§2.6 不在线性链上**（step 语义见 AGENTS.md 编号规约第 5 条）。
+
 > **流程声明**
 > - phase: spec
 > - step: 7/7
@@ -480,20 +482,21 @@ produced: .project/specs/master/prototypes/{模块编号}-{模块名}/prototype-
 
 > **blocking=true 理由**：§2.7 产出的 TC-F-*.md 是 §3.6 代码审计 S-08 功能完整性检查的输入。跳过 §2.7 → §3.6 S-08 失效 → 编码完成但场景覆盖未验证。**Skill 缺失场景的兜底**：仍要写入手工 TC-F 大纲（至少列出 P0 场景的预期行为），文件存在但内容简略不视为违规；触发 G2 由用户决定是否真跳过。
 
-**`.test-env.md` 按需生成 + 自动检测**（调用 test-case-design Skill 前必须完成）：
+**`.test/.test-env.md` 按需生成 + 自动检测**（调用 test-case-design Skill 前必须完成）：
 
-§2.7 是首次消费 `.test-env.md` 的章节，进入时**按以下流程确保配置完整可用**：
+§2.7 是首次消费 `.test/.test-env.md` 的章节，进入时**按以下流程确保配置完整可用**：
 
-1. **检查文件**：`ls .test-env.md`（项目根）
+1. **检查文件**：`ls .test/.test-env.md`
 2. **文件不存在 → 创建 + 自动扫描**：
+   - 先确保 `.test/` 目录存在
    - Read 权威模板：`{SKILL_DIR}/tools/test-case-design/references/test-env-template.md` 的「## 一、完整模板」代码块
    - 按下方"配置字段检测来源参考表"逐字段扫描项目实际配置
    - 用真实值替换模板默认值；AI 确实无法检测的字段保留模板默认值并标注 `  # TODO 用户填写`
-   - 写入项目根 `.test-env.md`
+   - 写入 `.test/.test-env.md`
 3. **文件已存在 → 检查 TODO 字段**：
-   - `grep '# TODO' .test-env.md`
+   - `grep '# TODO' .test/.test-env.md`
    - 有 TODO → 按上方检测表针对仍为 TODO 的字段扫描补全
-4. **vars 类账号字段无法自动检测时**：触发 G2 停车询问用户（详见下方"用户决策路径"）
+4. **vars 类账号字段无法自动检测时**：不停车，不猜测；保留 TODO 并在 test-case-design 回执中列出待补字段，§4 E2E 前置环境确认时再集中处理
 
 **配置字段检测来源参考表**：
 
@@ -506,28 +509,7 @@ produced: .project/specs/master/prototypes/{模块编号}-{模块名}/prototype-
 | `test_dirs.backend_unit` | Java `src/test/java`；Go 与源码同目录 `*_test.go`；Python `tests/` | `src/test/java` / `tests/` |
 | `base_url.local` | 后端启动配置（`server.port` / `package.json start` 端口）；`.docs/tech/` API 文档 | `http://localhost:8080` |
 | `MCP 能力声明` | 当前 AI 工具能力（Claude Code 通常 `shell`；其他能力按实际 MCP 装载情况） | shell / http-client / sql-runner / playwright |
-| `vars.*` | **AI 不自动填写**（账号密码不应推测）→ 留 TODO，进入"用户决策路径" | — |
-
-**用户决策路径（仅 vars 类字段无法自动检测时触发）**：
-
-```
-【G2 停车 - .test-env.md vars 字段需用户决策】
-已自动检测并填充以下字段：
-  · test_db: {自动填值} ✅
-  · test_commands.frontend/backend: {自动填值} ✅
-  · test_dirs.*: {自动填值} ✅
-  · base_url.local: {自动填值} ✅
-  · MCP 能力声明: {自动填值} ✅
-
-但以下账号类字段 AI 无法自动检测：
-  · vars.test_user / vars.test_password: 需用户填写实际测试账号
-  · 其他 vars.*: ...
-
-请选择：
-  A. 我现在编辑 .test-env.md 填好 vars 后回复"填好了"继续（完整测试模式，推荐）
-  B. 跳过这些字段（涉及登录测试的用例会自动降级为 manual 或被 Skill 跳过）
-  C. 取消本次 §2.7
-```
+| `vars.*` | **AI 不自动填写**（账号密码不应推测）→ 留 TODO，§4 E2E 前置环境确认时再处理 | — |
 
 完成上述按需生成 + 检测后，才进入下方 Skill 调用流程。
 
@@ -542,7 +524,7 @@ produced: .project/specs/master/prototypes/{模块编号}-{模块名}/prototype-
 - `output_dir`：`.test/testcases/`
 - `csv_template`：`both`（同时输出 detailed + traditional）
 
-> 不传 `channels_filter`——Skill 只支持 3 个功能测试 channel（manual/ui-dom/ui-visual），纯后端项目 Skill 内部自行判断不产出 UI 用例。
+> 不传 `channels_filter`——Skill 只支持 3 个功能测试 channel（e2e/visual/manual），纯后端项目 Skill 内部自行判断不产出前端 E2E / visual 用例。
 
 **产出**：
 
@@ -558,11 +540,11 @@ produced: .project/specs/master/prototypes/{模块编号}-{模块名}/prototype-
 **用途**：
 - QA 手工执行功能测试
 - 导入禅道/飞书测试管理平台（CSV 导出）
-- 未来 E2E Skill 的输入（§4 全部模块归档后执行）
+- E2E Skill 的输入（§4 全部模块归档后执行；消费 `channel=e2e` + `e2e-exec`）
 - §3.1 编码时加载参考（了解"代码需要支持哪些功能场景"，TDD 思路）
 - §3.6 代码审计 S-08 功能完整性检查（对照 TC 的 P0/P1 场景检查代码是否有对应实现）
 
-**Skill 文件缺失处理**：Skill 缺失时**不直接跳过**——AI 兜底产出**手工 TC-F 大纲**（至少含 P0 场景的预期行为，结构简化版亦可），写入 `.test/testcases/TC-F-{模块}-{功能}.md`，并触发 G2 停车请用户决定（A. 接受简化版继续 / B. 用户补全后继续 / C. 跳过本节，由用户书面确认风险）。任何决策都必须在 context.md 写入 produced（即便简化版亦计为产物）。
+**Skill 文件缺失处理**：Skill 缺失时**不直接跳过**——AI 兜底产出**手工 TC-F 大纲**（至少含 P0 场景的预期行为，结构简化版亦可），写入 `.test/testcases/TC-F-{模块}-{功能}.md`，并触发 G2 停车请用户决定（A. 接受简化版继续 / B. 用户补全后继续 / C. 跳过本节，由用户书面确认风险）。任何决策都必须在 context.md 写入 produced（即便简化版亦计为产物）。**TC 文档 / index.md 的 `test-case-status` 取值**（与 `tc-doc-template.md` 元数据表 + test-case-design SKILL post-processing 一致）：A/简化版兜底 → `fallback`；B/用户补全后正常完成 → `done`；C/用户确认跳过 → `skipped`。
 
 **更新 context.md**：产出完成后，追加一条记录 `{日期} {模块名} 功能测试用例设计完成（{N} 条用例）— last: §2.7 功能测试用例设计（下次进入 §3.0 通道判断）`
 

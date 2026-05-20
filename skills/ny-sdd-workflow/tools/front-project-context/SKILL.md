@@ -18,6 +18,8 @@ description: |
 帮助用户对项目进行规范提取，生成核心文件：
 - `FRONT_PROJECT_CONTEXT.md`：项目知识地图，供模型每次生成代码前查阅
 
+> **SDD 工作流集成约定**：在 SDD Workflow §1.3 调用本 Skill 时，本 Skill 仍在项目根产出 `FRONT_PROJECT_CONTEXT.md`，**随后由调用方（§1.3 / skill-routing.md）将其 `mv` 重命名为 `.project/specs/rules/frontend-context.md`**。本 Skill 自身不写入 `.project/`；非 SDD 独立使用时保留根目录 `FRONT_PROJECT_CONTEXT.md` 即可。
+
 ## 使用前提
 
 - 需要文件系统访问权限（Claude Code 直接使用；Claude.ai 需用户上传项目文件或在容器中准备好项目）

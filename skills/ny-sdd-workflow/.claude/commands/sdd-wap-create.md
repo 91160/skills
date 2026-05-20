@@ -1,10 +1,10 @@
 ---
-description: 基于 template-vue3 创建符合公司规范的前端 H5 项目（绑定 SDD §1.1 前端项目初始化）
+description: 创建 Vue3 + Vite + TypeScript 前端移动端 H5 项目脚手架（绑定 SDD §1.1 前端项目初始化）
 ---
 
 # /sdd-wap-create — 前端 H5 项目脚手架
 
-调用 SDD Workflow 内置的 `wap-project-creator` Skill，基于公司内部 template-vue3 模板克隆并完成关键配置修改，输出配套规范文档 CONVENTIONS.md。
+调用 SDD Workflow 内置的 `wap-project-creator` Skill，创建 Vue3 + Vite + TypeScript 前端 H5 项目脚手架，输出配套规范文档 CONVENTIONS.md。
 
 ## 执行步骤
 
@@ -12,7 +12,7 @@ description: 基于 template-vue3 创建符合公司规范的前端 H5 项目（
 2. 读取 `{SKILL_DIR}/rules/skill-routing.md`（仅在 SDD 已初始化时）。
 3. 读取 `{SKILL_DIR}/tools/wap-project-creator/SKILL.md`，按其规范在**当前工作目录**执行：
    - 第一步：使用 `AskUserQuestion` 一次性收集项目信息（appName / description）
-   - 后续：克隆 template-vue3，修改 vite.config.mts / Jenkinsfile / package.json 关键配置，生成 CONVENTIONS.md
+   - 后续：用 `pnpm create vite` 创建 Vue3+TS 脚手架，完成关键配置（vite.config.ts / package.json），生成 CONVENTIONS.md
 4. 输出标准 Skill 执行日志（阶段 / Skill / 路径 / 执行方式）。
 
 ## 流程冲突保护
@@ -50,7 +50,7 @@ description: 基于 template-vue3 创建符合公司规范的前端 H5 项目（
 
 ## 产出
 
-- 基于 template-vue3 克隆并配置好的完整项目目录
+- Vue3 + Vite + TypeScript 完整项目脚手架
 - 项目规范文档 CONVENTIONS.md
 - 若 SDD 已初始化，可通过 `/sdd-front-context` 进一步生成 `.project/specs/rules/frontend-context.md`
 

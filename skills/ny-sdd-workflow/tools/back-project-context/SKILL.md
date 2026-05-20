@@ -18,6 +18,8 @@ description: |
 帮助用户对 Java/Spring Boot 后端项目进行规范提取，生成核心文件：
 - `BACKEND_PROJECT_CONTEXT.md`：后端项目知识地图，供模型每次生成代码前查阅
 
+> **SDD 工作流集成约定**：在 SDD Workflow §1.3 调用本 Skill 时，本 Skill 仍在项目根产出 `BACKEND_PROJECT_CONTEXT.md`，**随后由调用方（§1.3 / skill-routing.md）将其 `mv` 重命名为 `.project/specs/rules/backend-context.md`**。本 Skill 自身不写入 `.project/`；非 SDD 独立使用时保留根目录 `BACKEND_PROJECT_CONTEXT.md` 即可。
+
 ## 使用前提
 
 - 需要文件系统访问权限

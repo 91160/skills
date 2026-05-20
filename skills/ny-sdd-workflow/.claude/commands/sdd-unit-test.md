@@ -9,10 +9,10 @@ description: 设计 + 生成 + 执行单元测试（绑定 SDD §3.7.1 自动化
 ## 执行步骤
 
 1. 读取项目根目录 `AGENTS.md`，定位 `{SKILL_DIR}`。不存在 → 提示「请先 `/sdd-init`」并退出。
-2. **`.test-env.md` 按需生成 + 自动检测**（调用 Skill 前必须完成）：
-   - `ls .test-env.md` → 不存在则按 `phase-spec.md §2.7「.test-env.md 按需生成 + 自动检测」`段流程创建（Read 权威模板 + 扫描项目配置 + 填值）
-   - 存在则 `grep '# TODO' .test-env.md` 检查 TODO 字段 → 有则按检测表补全
-   - vars 类账号字段 AI 无法自动检测时 → 触发 G2 询问用户（详见 §2.7 「用户决策路径」）
+2. **`.test/.test-env.md` 按需生成 + 自动检测**（调用 Skill 前必须完成）：
+   - `ls .test/.test-env.md` → 不存在则按 `phase-spec.md §2.7「.test/.test-env.md 按需生成 + 自动检测」`段流程创建（Read 权威模板 + 扫描项目配置 + 填值）
+   - 存在则 `grep '# TODO' .test/.test-env.md` 检查 TODO 字段 → 有则按检测表补全
+   - vars 类账号字段 AI 无法自动检测时 → 保留 TODO，并在单测 / E2E 后续运行阶段按缺失变量处理
 3. 读取 `{SKILL_DIR}/rules/skill-routing.md`。
 4. **前置清理**（中断恢复机制）：
    - 检查测试目录是否存在 `generated/` 临时子目录 → 存在则删除
@@ -22,10 +22,12 @@ description: 设计 + 生成 + 执行单元测试（绑定 SDD §3.7.1 自动化
 
 ## SDD 模式参数（自动注入）
 
+> 字段名以 `tools/unit-test-generator/SKILL.md` 输入契约为准；下表为 SDD 自主设计模式的取值。
+
 | 参数 | 值 | 说明 |
 |---|---|---|
-| `input` | 当前模块的 REQ + DES + 实际源代码文件 | 来自 `.project/specs/master/` + 实际代码 |
-| `frameworks` | 从 `project-profile.md` 技术栈自动推断 | 前端→vitest/jest，后端→junit5/pytest/gotest；全栈一次调用同时生成 |
+| （无 `tc_source`） | 自主设计模式不传，自动用 REQ + DES + 实际源代码设计用例 | 来自 `.project/specs/master/` + 实际代码 |
+| `framework_hint` | 从 `project-profile.md` 技术栈自动推断 | 前端→vitest/jest，后端→junit5/pytest/gotest；全栈一次调用同时生成 |
 | `exec_mode` | `true`（SDD 默认开启） | 生成后自动执行 |
 | `output_dir` | `.test/unit/` | 与 SDD 标准产出路径一致 |
 
@@ -33,12 +35,12 @@ description: 设计 + 生成 + 执行单元测试（绑定 SDD §3.7.1 自动化
 
 ### 类 1：阶段冲突（last 与命令绑定阶段不一致）
 
-读取 `.project/context.md` 的 `last` 字段。若 `last` 不在 §3.5（编码完成后）/ §3.7（开发自测阶段），输出：
+读取 `.project/context.md` 的 `last` 字段（绑定阶段为 §3.7.1 自动化单测，前置链为 §3.5 编码 → §3.6 审计 → §3.7 自测）。若 `last` 不在 §3.5 / §3.6 / §3.7 这一编码—自测区间，输出：
 
 ```
 【流程冲突提示 — 阶段冲突】
 当前工作流阶段：{last 字段}
-本命令绑定阶段：§3.7.1 自动化单测（前置：§3.5 编码完成）
+本命令绑定阶段：§3.7.1 自动化单测（前置：§3.5 编码完成，正常在 §3.6 审计后进入）
 冲突点：{当前模块尚未编码 / last 在更早阶段}
 
 请选择处理方式：

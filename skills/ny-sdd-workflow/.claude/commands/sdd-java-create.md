@@ -1,10 +1,10 @@
 ---
-description: 创建符合公司规范的 Java/Spring Boot 微服务项目脚手架（绑定 SDD §1.1 后端项目初始化）
+description: 创建符合阿里巴巴 Java 开发手册规范的 Spring Boot 项目脚手架（绑定 SDD §1.1 后端项目初始化）
 ---
 
 # /sdd-java-create — Java 项目脚手架
 
-调用 SDD Workflow 内置的 `java-project-creator` Skill，基于公司架构规范快速创建 Spring Boot 微服务项目，并产出配套规范文档。
+调用 SDD Workflow 内置的 `java-project-creator` Skill，基于阿里巴巴 Java 开发手册规范快速创建 Spring Boot 项目，并产出配套规范文档。
 
 ## 执行步骤
 

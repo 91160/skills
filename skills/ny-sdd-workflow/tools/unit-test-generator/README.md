@@ -11,7 +11,7 @@
 
 它消费符合 `tc-exec-schema` 规范的 Markdown TC 文档，按指定测试框架翻译成可直接 `npm test` / `mvn test` / `pytest` 跑通的代码。
 
-**核心定位**：**独立工具**。只要你给一份带 tc-exec 块的 TC 文档 + 告诉它用什么框架，它就能产出可直接跑的测试文件。**TC 文档来源不限**——可以是 `test-case-design` Skill 自动生成的，也可以是 QA 人工撰写的，只要符合 tc-exec 格式。
+**核心定位**：**独立工具**。只要你给一份带 tc-exec 块的 TC/UT 文档 + 告诉它用什么框架，它就能产出可直接跑的测试文件。SDD 标准流程中，本 Skill 通常自主设计 UT-* 单测用例；`test-case-design` 生成的 TC-F 使用 `e2e-exec`，由 §4 `e2e-test-runner` 消费。
 
 ---
 
@@ -89,13 +89,13 @@
 ### 与 test-case-design 的分工
 
 ```
-test-case-design（上游）
-  ↓ 产出：TC 文档（功能测试用例为主）
+test-case-design（并行上游）
+  ↓ 产出：TC-F 文档（e2e/visual/manual + e2e-exec）
   ↓ 定位：QA 视角的"测什么"
   ↓ 用户：测试工程师
 
 unit-test-generator（本 Skill，下游）
-  ↓ 消费：TC 文档的 tc-exec 块（channel=unit/api/db/cli/ui-dom）
+  ↓ 输入：REQ/DES/源码自主设计 UT-*，或消费人工提供的 tc-exec 文档
   ↓ 产出：Jest/JUnit5/pytest/go test 代码
   ↓ 定位：开发视角的"怎么写代码跑这些用例"
   ↓ 用户：开发工程师 + CI 流水线
@@ -147,16 +147,16 @@ unit-test-generator（本 Skill，下游）
 
 详见 [`references/fixture-strategies.md`](./references/fixture-strategies.md)。
 
-### 📋 共享 tc-exec 契约
+### 📋 tc-exec 单测派生契约
 
-本 Skill 和 `test-case-design` Skill 共享同一份 `tc-exec-schema.md` 契约：
+本 Skill 使用自己的 `tc-exec-schema.md` 契约解析或生成 UT-* 单测用例：
 
 - **15 个固定断言操作符**：`==` / `!=` / `>` / `>=` / `<` / `<=` / `exists` / `not_exists` / `type` / `regex` / `contains` / `not_contains` / `length==` / `length>=` / `length<=`
 - **7 个 channel**：api / db / unit / cli / ui-dom / ui-visual / manual
 - **JSONPath 简化路径**：`json.data.token` / `db[users][id=1].status` / `stdout` / `dom[.btn].text`
-- **变量引用**：`${env.base_url}` 从 `.test-env.md` 解析
+- **变量引用**：`${env.base_url}` 从 `.test/.test-env.md` 解析
 
-详见 [`references/tc-exec-schema.md`](./references/tc-exec-schema.md)（本 Skill 的副本，**权威版本在 test-case-design Skill**）。
+详见 [`references/tc-exec-schema.md`](./references/tc-exec-schema.md)。
 
 ---
 
@@ -207,7 +207,7 @@ Skill 链：
 
 ### 场景 D：SDD 工作流集成
 
-在 ny-sdd-workflow 的 §3.7 开发自测阶段自动调用，无需手动触发。详见 SDD workflow 的 `phase-coding.md`。
+在 [ny-sdd-workflow](https://github.com/91160/skills.git) 的 §3.7.1 自动化单测阶段自动调用，无需手动触发。详见 SDD workflow 的 `phase-coding.md`。
 
 ### 场景 E：CI 流水线集成
 
@@ -227,14 +227,16 @@ Skill 链：
 
 | 字段 | 必需/可选 | 说明 |
 |---|---|---|
-| `tc_source` | **必需** | TC 文档文件路径 或 完整 Markdown 文本 |
-| `framework_hint` | **必需** | `jest` / `vitest` / `junit5` / `pytest` / `gotest` |
-| `output_dir` | **必需** | 骨架输出目录 |
-| `runtime_source` | 可选 | `.test-env.md` 路径（含 test_db / test_dirs / vars） |
-| `channels_filter` | 可选 | channel 列表，默认 `["unit"]`，可扩展到 `["unit","api","db"]` |
+| `tc_source` | 翻译模式**必需** / 自主设计模式可选 | TC 文档文件路径 或 完整 Markdown 文本；自主设计模式不传，改用 REQ/DES + 源代码 |
+| `framework_hint` | 翻译模式**必需** / SDD 模式可选 | `jest` / `vitest` / `junit5` / `pytest` / `gotest`；SDD 模式自动从 project-profile.md 推断 |
+| `output_dir` | **必需** | 骨架输出目录；SDD 模式默认 `.test/unit/` |
+| `runtime_source` | 可选 | `.test/.test-env.md` 路径（含 test_db / test_dirs / vars） |
+| `channels_filter` | 可选 | channel 列表；翻译模式默认 `["unit"]`，SDD 自主设计模式默认 `["unit","api","db"]` |
 | `fixture_strategy` | 可选 | `auto` / `inline` / `external` / `hybrid`，默认 `auto` |
+| `exec_mode` | 可选 | `true` / `false`；SDD 模式默认 `true`（执行 + 输出 report.md），翻译模式默认 `false` |
 
-**最小输入**：`tc_source` + `framework_hint` + `output_dir`
+**翻译模式最小输入**：`tc_source` + `framework_hint` + `output_dir`
+**SDD 自主设计模式最小输入**：REQ + DES + 源代码路径（从 SDD 上下文自动获取），其余均有 SDD 默认值
 
 详见 [SKILL.md](./SKILL.md) 的「输入契约」章节。
 
@@ -270,23 +272,19 @@ Skill 链：
 
 ### 与 `test-case-design` 的关系（强相关）
 
-两个 Skill **协作**完成"设计 → 执行"闭环，但**完全独立**：
+两个 Skill **协作**完成"功能用例设计 / 单测生成"闭环，但**完全独立**：
 
 | Skill | 职责 | 输入 | 输出 |
 |---|---|---|---|
-| `test-case-design` | 测试用例**设计**（"测什么"） | REQ/DES/PRD | TC 文档 + CSV |
-| `unit-test-generator`（本 Skill） | 单测代码**派生**（"怎么写"） | TC 文档 | Jest/JUnit/pytest 等代码 |
+| `test-case-design` | 功能测试用例**设计**（"测什么"） | REQ/DES/PRD | TC-F 文档 + CSV + e2e-exec |
+| `unit-test-generator`（本 Skill） | 单测代码**设计/派生**（"怎么写"） | REQ/DES/源码 或 tc-exec 文档 | UT 文档 + Jest/JUnit/pytest 等代码 |
 
 **关键独立性**：
 - 本 Skill 不依赖 `test-case-design` 的存在
-- 任何符合 `tc-exec-schema` 规范的 TC 文档都能被消费——可以是 `test-case-design` 生成的，也可以是 QA 人工手写的
+- 任何符合 `tc-exec-schema` 规范的 TC/UT 文档都能被消费；SDD 标准流程中，本 Skill 通常自主设计 UT-*，不直接消费 TC-F 的 `e2e-exec`
 - 本 Skill 也可以单独发布、单独安装、单独使用
 
-**共享契约**：两个 Skill 各有一份 `references/tc-exec-schema.md` 副本（方案 A），双份**逐字节一致**。
-- **权威版本**：`test-case-design/references/tc-exec-schema.md`
-- **副本（本 Skill）**：`unit-test-generator/references/tc-exec-schema.md`
-
-⚠️ **不要直接修改本 Skill 的 tc-exec-schema.md**。需要修改时请先改权威版本，再用 `cp` 同步到本副本。详见 [SKILL.md](./SKILL.md) 的「相关规范文件」和 `references/tc-exec-schema.md` 头部的同步注意。
+**契约边界**：`test-case-design` 的 E2E 契约是 `e2e-exec`；本 Skill 的单测派生契约是 `tc-exec`。二者不共享 schema。
 
 ### 与 `code-audit` 的关系（弱相关）
 
@@ -305,7 +303,7 @@ unit-test-generator/
 ├── README.md                       ← 本文档
 ├── SKILL.md                        ← Skill 入口（frontmatter + 5 步工作流）
 └── references/
-    ├── tc-exec-schema.md           ← 共享契约（权威版本在 test-case-design）
+    ├── tc-exec-schema.md           ← 本 Skill 的单测派生契约
     ├── framework-adapters.md       ← 5 框架完整代码模板库（最大文件）
     └── fixture-strategies.md       ← inline/external/auto 三种 fixture 策略
 ```
@@ -422,9 +420,9 @@ describe('TC-login-003 登录 - 密码错误', () => {
 
 ---
 
-## 配置文件 `.test-env.md`（可选但推荐）
+## 配置文件 `.test/.test-env.md`（可选但推荐）
 
-如果项目有真实的测试数据库和服务，提供 `.test-env.md` 让生成的代码使用真实环境：
+如果项目有真实的测试数据库和服务，提供 `.test/.test-env.md` 让生成的代码使用真实环境：
 
 ```markdown
 # 测试运行环境声明
@@ -436,7 +434,7 @@ describe('TC-login-003 登录 - 密码错误', () => {
 
 ## 测试数据库
 - `test_db.type = mysql`
-- `test_db.dsn = mysql://root:YOUR_PASSWORD@localhost:3306/app_test`
+- `test_db.dsn = mysql://test:test@localhost:3306/app_test`
 
 ## 测试运行命令
 - `test_commands.frontend = npm test`
@@ -450,7 +448,7 @@ describe('TC-login-003 登录 - 密码错误', () => {
 - `vars.test_user = zhangsan`
 ```
 
-不提供 `.test-env.md` 也能用，本 Skill 会自动降级到 in-memory DB + mock server 模式：
+不提供 `.test/.test-env.md` 也能用，本 Skill 会自动降级到 in-memory DB + mock server 模式：
 
 | 框架 | test_db 缺失时 | base_url 缺失时 |
 |---|---|---|
@@ -465,7 +463,7 @@ describe('TC-login-003 登录 - 密码错误', () => {
 
 ### Q：必须用 `test-case-design` Skill 生成 TC 文档吗？
 
-不必须。本 Skill 消费**任何符合 tc-exec-schema 规范的 TC 文档**——可以是 `test-case-design` 生成的，也可以是 QA 人工手写的，甚至可以是其他工具产出的。只要符合 `references/tc-exec-schema.md` 定义的格式。
+不必须。SDD 标准流程中，本 Skill 会从 REQ/DES/源码自主设计 UT-*；独立翻译模式下，也可以消费任何符合 `tc-exec-schema` 规范的 TC/UT 文档。`test-case-design` 的 TC-F E2E 用例使用 `e2e-exec`，不由本 Skill 消费。
 
 ### Q：生成的代码能直接 `npm test` 跑吗？
 
@@ -488,7 +486,7 @@ describe('TC-login-003 登录 - 密码错误', () => {
 
 ### Q：channel=ui-dom / ui-visual / manual 的用例会被派生吗？
 
-不会。本 Skill 默认只处理 `channel=unit` 的用例。`ui-visual` 和 `manual` 永远不可派生。`api` / `db` / `cli` / `ui-dom` 用例如果想派生（例如生成 supertest / sqlmock / Playwright 代码），可以通过 `channels_filter: ["unit","api","db"]` 扩展。
+不会。本 Skill 默认只处理 `channel=unit` 的用例。`ui-visual` 和 `manual` 永远不可派生。E2E / 浏览器端到端测试请使用 §4 `e2e-test-runner`。
 
 ### Q：fixture 策略怎么选？
 
@@ -500,7 +498,7 @@ describe('TC-login-003 登录 - 密码错误', () => {
 
 ### Q：怎么把生成的骨架文件迁到项目源码树？
 
-如果在 SDD 工作流中，§2.5 Step 5 会按文件名后缀自动迁移。
+如果在 SDD 工作流中，§3.7.1 会按文件名后缀自动迁移骨架。
 
 如果独立使用，需要手动迁移。建议：
 1. 看回执的"下一步"提示，里面有具体目标目录
@@ -520,7 +518,7 @@ describe('TC-login-003 登录 - 密码错误', () => {
 1. **完全独立**：不依赖 `test-case-design` 或任何其他 Skill。可独立发布、独立使用
 2. **完整可跑**：生成的不是骨架占位符，而是可直接 `npm test` 跑通的代码
 3. **格式严格**：15 操作符 / 7 channel / 5 框架都是冻结枚举，禁止 AI 自由扩展
-4. **降级友好**：`.test-env.md` 缺失自动降级 in-memory DB；framework_hint 缺失整步跳过
+4. **降级友好**：`.test/.test-env.md` 缺失自动降级 in-memory DB；framework_hint 缺失整步跳过
 5. **追溯清晰**：每条单测顶部 `// @TC-{ID}` 注释反向追溯到 TC 文档源用例
 6. **幂等可靠**：多次执行同一输入产出一致，可在 CI 流水线安全重复运行
 
@@ -540,7 +538,7 @@ describe('TC-login-003 登录 - 密码错误', () => {
 
 ## 许可
 
-MIT
+UNLICENSED（内部使用）
 
 ---
 
@@ -548,3 +546,5 @@ MIT
 
 - [SKILL.md](./SKILL.md) — Skill 完整定义（工作流程 + 输入契约 + 输出回执）
 - [references/](./references/) — 详细规范文件（tc-exec 契约 + 框架适配器 + fixture 策略）
+- [test-case-design](https://github.com/91160/skills.git#test-case-design) — 姊妹 Skill，从 REQ/DES/PRD 设计 TC 文档
+- [ny-sdd-workflow](https://github.com/91160/skills.git#ny-sdd-workflow) — SDD 开发工作流（含 §3.7.1 集成本 Skill）

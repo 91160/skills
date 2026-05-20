@@ -5,12 +5,12 @@
 **核心原则**：元数据 + 覆盖矩阵 + 自审报告 **全部内嵌文档头部**，不拆独立文件。
 
 **Sibling 输出**：TC 文档与 `testcases.detailed.csv` 是 **并行输出**（同一批用例的两种视图）：
-- **TC-xx.md**：面向 **AI 自动执行**，含双层结构（人类描述 + tc-exec 契约）
+- **TC-xx.md**：面向 **人工 QA + E2E 自动执行**，含双层结构（人类描述 + `e2e-exec` 契约）
 - **testcases.csv**：面向 **QA 人工管理**，12 列精简 Schema，可导入测试管理工具（TestRail / Zephyr / Xray / 禅道 / 飞书多维表格）
 
 两份文件从同一份用例蓝本（Step 3 产出）并行投影，而非互相派生。CSV 的详细规范见 `references/csv-export-schema.md`。
 
-**定位**：本 Skill 只生成功能测试用例（manual/ui-dom/ui-visual channel）。单元测试（unit/api/db channel）由独立 Skill `/unit-test-generator` 负责。
+**定位**：本 Skill 只生成功能测试用例（e2e/visual/manual channel）。单元测试（unit/api/db channel）由独立 Skill `/unit-test-generator` 负责。
 
 ---
 
@@ -31,7 +31,7 @@
 - `test-case-status = draft`
 - `total-cases = {N}`
 - `executable-rate = {N}%`
-- `channel-breakdown = manual:{N}, ui-dom:{N}, ui-visual:{N}`
+- `channel-breakdown = e2e:{N}, visual:{N}, manual:{N}`
 - `inferred-des = {true|false}`
 - `generated-at = {YYYY-MM-DD}`
 - `generator = test-case-design Skill v1`
@@ -40,8 +40,8 @@
 
 | REQ 验收标准 | DES 维度 | 对应 TC | 通道 |
 | --- | --- | --- | --- |
-| §2.1 正常登录 | 核心流程 §3.1 | TC-F-{module_id}-001 | manual |
-| §2.1 正常登录 | UI §5.1 布局 | TC-F-{module_id}-002 | ui-dom |
+| §2.1 正常登录 | 核心流程 §3.1 | TC-F-{module_id}-001 | e2e |
+| §2.1 正常登录 | UI §5.1 布局 | TC-F-{module_id}-002 | e2e |
 | §2.2 密码错误 | 异常路径 | TC-F-{module_id}-003 | manual |
 | §2.3 账号锁定 | 状态管理 §6.1 | TC-F-{module_id}-004 | manual |
 | ... | ... | ... | ... |
@@ -67,15 +67,15 @@
 - **TC-05 用例可执行**: ✅ 通过
 - **TC-06 优先级合理**: ✅ 通过 | P0:{n} / P1:{n} / P2:{n} | P0 占比 {%}
 
-**一致性校验**: ✅ Markdown 描述与 tc-exec 块语义对齐
+**一致性校验**: ✅ Markdown 描述与 e2e-exec 块语义对齐
 **修复次数**: {总次数}
 
 ## 用例总览
 
 | TC ID | 描述 | 优先级 | 通道 | 可执行 | 方法论 |
 | --- | --- | --- | --- | --- | --- |
-| TC-F-{mod}-001 | 正常登录流程 | P0 | manual | — | 场景法 |
-| TC-F-{mod}-002 | 登录页布局还原 | P1 | ui-dom | — | 场景法 |
+| TC-F-{mod}-001 | 正常登录流程 | P0 | e2e | ✅ | 场景法 |
+| TC-F-{mod}-002 | 登录页布局还原 | P1 | visual | 截图/人工 | 场景法 |
 | TC-F-{mod}-003 | 密码错误处理 | P0 | manual | — | 错误推测 |
 | ... | | | | | |
 
@@ -87,7 +87,7 @@
 
 #### TC-F-{mod}-001 {描述}
 
-**channel**: manual | **priority**: P0 | **exec-mode**: manual | **source**: REQ-{xx} 验收标准 #{N}
+**channel**: e2e | **priority**: P0 | **exec-mode**: auto | **source**: REQ-{xx} 验收标准 #{N}
 
 **目的**：{一句话说明为什么需要这条用例}
 
@@ -104,6 +104,25 @@
 - {预期行为}
 - {预期行为}
 
+```e2e-exec
+framework: playwright
+runnable: true
+module: {module_id}-{module_name}
+page: {page_key}
+url: /{path}
+tags: [regression]
+data: {}
+setup: []
+steps:
+  - action: goto
+    url: /{path}
+assertions:
+  - type: visible
+    target:
+      text: {关键页面文案}
+teardown: []
+```
+
 ---
 
 ## 二、UI 交互测试
@@ -114,7 +133,7 @@
 
 #### TC-F-{mod}-010 登录页 - 正常表单提交流程
 
-**channel**: ui-dom | **priority**: P1 | **exec-mode**: manual | **source**: DES-{xx} > UI 还原
+**channel**: e2e | **priority**: P1 | **exec-mode**: auto | **source**: DES-{xx} > UI 还原
 
 **步骤**:
 1. 打开登录页
@@ -126,6 +145,52 @@
 - 跳转到首页
 - 显示用户名
 
+```e2e-exec
+framework: playwright
+runnable: true
+module: {module_id}-{module_name}
+page: login
+url: /login
+tags: [smoke, auth]
+data:
+  username: ${vars.test_user}
+  password: ${vars.test_password}
+setup: []
+steps:
+  - action: goto
+    url: /login
+  - action: fill
+    target:
+      selector: ${selectors.login.username}
+      role: textbox
+      name: 用户名
+      placeholder: 请输入用户名
+      label: 用户名
+    value: ${vars.test_user}
+  - action: fill
+    target:
+      selector: ${selectors.login.password}
+      role: textbox
+      name: 密码
+      placeholder: 请输入密码
+      label: 密码
+    value: ${vars.test_password}
+  - action: click
+    target:
+      selector: ${selectors.login.submit}
+      role: button
+      name: 登录
+assertions:
+  - type: url_contains
+    value: /home
+  - type: text_contains
+    target:
+      selector: ${selectors.home.username}
+      text: 用户名
+    value: ${vars.test_user}
+teardown: []
+```
+
 ---
 
 ## 三、视觉回归测试
@@ -136,7 +201,7 @@
 
 #### TC-F-{mod}-020 登录页 - 视觉一致性
 
-**channel**: ui-visual | **priority**: P1 | **exec-mode**: manual | **source**: PRD 视觉内容
+**channel**: visual | **priority**: P1 | **exec-mode**: visual | **source**: PRD 视觉内容
 
 **步骤**:
 1. 打开登录页
@@ -204,7 +269,7 @@
 | `review-status` | ✅ | `draft` / `approved` | 人工评审状态 |
 | `test-case-status` | ✅ | `draft` / `done` / `doc-only` / `fallback` / `skipped` | 测试用例状态 |
 | `total-cases` | ✅ | 整数 | TC 文档中的用例总数 |
-| `executable-rate` | ✅ | 百分比 | 可执行用例占比 = (非 manual/ui-visual) / 总数 |
+| `executable-rate` | ✅ | 百分比 | 可执行用例占比 = channel=e2e / total-cases |
 | `channel-breakdown` | ✅ | 逗号分隔 | 每个 channel 的用例数分布 |
 | `inferred-des` | ⬜ | `true` / `false` | 无 DES 时从 REQ 推断，标 true |
 | `generated-at` | ✅ | `YYYY-MM-DD` | 生成日期 |
@@ -226,20 +291,20 @@
 | TC ID | TC-F-{module_id}-{seq:03} |
 | 描述 | 一句话用例名 |
 | 优先级 | P0 / P1 / P2 |
-| 通道 | manual / ui-dom / ui-visual |
+| 通道 | e2e / visual / manual |
 | 方法论 | 6 种方法论之一 |
 | 方法论 | 6 种方法论之一 |
 
 ---
 
-## 三、组装顺序（Skill Step 7 执行）
+## 三、组装顺序（Skill Step 6 执行）
 
 Skill 按以下 9 步组装 TC 文档：
 
 ```
 1. 计算元数据
    - 统计 total-cases, channel-breakdown
-   - 计算 executable-rate（非 manual/ui-visual 的占比）
+   - 计算 executable-rate（channel=e2e / total-cases）
    - 设置 generated-at 为当前日期
 
 2. 组装覆盖率矩阵
@@ -257,16 +322,16 @@ Skill 按以下 9 步组装 TC 文档：
    - 填 6 列数据
 
 5. 组装第一章 业务流程测试
-   - 从用例蓝本中筛选 channel=manual 且为正常/异常业务流程的用例
+   - 从用例蓝本中筛选 channel=e2e 或 manual 且为正常/异常业务流程的用例
    - 采用场景法 + 状态迁移 + 等价类划分
    - 按 TC-ID 顺序排列
 
 6. 组装第二章 UI 交互测试
-   - 筛选 channel=ui-dom 的用例
+   - 筛选 channel=e2e 且属于 UI 交互的用例
    - 若任务不涉及前端，写 "不涉及（后端任务）"
 
 7. 组装第三章 视觉回归测试
-   - 筛选 channel=ui-visual 的用例
+   - 筛选 channel=visual 的用例
    - 若任务不涉及前端，写 "不涉及（后端任务）"
 
 8. 组装第四章 异常与边界测试
@@ -311,19 +376,19 @@ Skill 按以下 9 步组装 TC 文档：
 
 ## 六、组装完成后的验证清单
 
-Skill Step 7 完成写盘前，逐条自检：
+Skill Step 6 完成写盘前，逐条自检：
 
 1. [ ] 文件名符合 `TC-F-{module_id}-{module_name}.md` 模式
 2. [ ] 元数据 12 个必填字段齐全
 3. [ ] `total-cases` 与实际用例数一致
 4. [ ] `channel-breakdown` 的和 = `total-cases`
-5. [ ] `executable-rate` 计算正确（非 manual/ui-visual / total）
+5. [ ] `executable-rate` 计算正确（channel=e2e / total）
 6. [ ] 覆盖率矩阵中的每条 TC 在用例正文中都能找到
 7. [ ] 用例总览表的每条 TC 在用例正文中都能找到
 8. [ ] 自审报告显示全部 6 项通过
 9. [ ] 五章结构完整（不涉及的章节有明确标注）
 10. [ ] 所有 `#### TC-xx` 标题符合 `TC-F-{module_id}-{seq:03}` 格式
-11. [ ] 所有 tc-exec 块符合 `tc-exec-schema.md` 定义
-12. [ ] 所有变量引用 `${env.xxx}` 在 `.test-env.md` 中存在
+11. [ ] 所有 `channel=e2e` 用例有且仅有一个 `e2e-exec` 块，并符合 `e2e-exec-schema.md` 定义
+12. [ ] 所有变量引用 `${vars.xxx}` / `${selectors.xxx}` / `${e2e.xxx}` 已在回执中标注为已解析或 TODO
 
 任一 [ ] 未勾选 → 修复后重新组装。

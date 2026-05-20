@@ -9,10 +9,10 @@ description: 为已通过评审的需求生成功能测试用例集（绑定 SDD
 ## 执行步骤
 
 1. 读取项目根目录 `AGENTS.md`，定位 `{SKILL_DIR}`。不存在 → 提示「请先 `/sdd-init` 并完成 §2.5 评审」并退出。
-2. **`.test-env.md` 按需生成 + 自动检测**（调用 Skill 前必须完成）：
-   - `ls .test-env.md` → 不存在则按 `phase-spec.md §2.7「.test-env.md 按需生成 + 自动检测」`段流程创建（Read 权威模板 + 扫描项目配置 + 填值）
-   - 存在则 `grep '# TODO' .test-env.md` 检查 TODO 字段 → 有则按检测表补全
-   - vars 类账号字段 AI 无法自动检测时 → 触发 G2 询问用户（详见 §2.7 「用户决策路径」）
+2. **`.test/.test-env.md` 按需生成 + 自动检测**（调用 Skill 前必须完成）：
+   - `ls .test/.test-env.md` → 不存在则按 `phase-spec.md §2.7「.test/.test-env.md 按需生成 + 自动检测」`段流程创建（Read 权威模板 + 扫描项目配置 + 填值）
+   - 存在则 `grep '# TODO' .test/.test-env.md` 检查 TODO 字段 → 有则按检测表补全
+   - vars 类账号字段 AI 无法自动检测时 → 保留 TODO 并在回执列出待补字段，§4 E2E 前置环境确认时再处理
 3. 读取 `{SKILL_DIR}/rules/skill-routing.md`。
 4. 读取 `{SKILL_DIR}/tools/test-case-design/SKILL.md`，按其规范在**当前工作目录**执行。
 5. 输出标准 Skill 执行日志（阶段 / Skill / 路径 / 执行方式）。
@@ -79,13 +79,13 @@ description: 为已通过评审的需求生成功能测试用例集（绑定 SDD
 
 - QA 手工执行功能测试
 - 导入禅道/飞书测试管理平台
-- 未来 E2E Skill 的输入
+- §4 E2E 自动化测试的用例来源
 - §3.1 编码时加载参考（TDD 思路）
 - §3.6 代码审计 S-08 功能完整性检查
 
 ## Skill 文件缺失兜底
 
-`{SKILL_DIR}/tools/test-case-design/SKILL.md` 不存在 → **跳过并提示用户后续补充**，不触发 G2 停车（功能测试用例非编码阻断项），执行日志标注 `Skill 缺失，跳过`。
+`{SKILL_DIR}/tools/test-case-design/SKILL.md` 不存在 → **不直接跳过**。按 §2.7 兜底生成简化 TC-F 大纲（至少覆盖 P0 场景预期行为），写入 `.test/testcases/TC-F-{模块}-{功能}.md`，并触发 G2 停车请用户决定：A. 接受简化版继续 / B. 用户补全后继续 / C. 取消本节。执行日志标注 `Skill 缺失，内置兜底(TC-F 大纲)`。
 
 ## 参数
 

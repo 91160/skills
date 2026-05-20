@@ -318,9 +318,9 @@ bug/refactor 不走 §2.4，当前模块可能无 prototype-spec.md。涉及 UI 
 - **编码 Skill 调用判断**：检查 index.md 当前模块的 `coding-skill` + context 文件是否存在：
   - `coding-skill` 为 `done` 或 `fallback` → 已处理，跳过
   - `coding-skill` 为 `pending` 且对应 context 文件已存在（frontend-context.md / backend-context.md）→ **跳过编码 Skill**，以 context 文件为编码规范，更新 `coding-skill` 为 `done`
-  - `coding-skill` 为 `pending` 且 context 文件不存在（新项目脚手架刚建好）→ 读取 {SKILL_DIR}/rules/skill-routing.md，按 Skill 执行流程调用编码 Skill（前端 /frontend-coding；后端无内置编码 Skill，直接使用 C-01~C-10 内置规约），**必须输出 Skill 执行日志**，完成后更新 `coding-skill` 为 `done` 或 `fallback`
+  - `coding-skill` 为 `pending` 且 context 文件不存在（新项目脚手架刚建好）→ 读取 {SKILL_DIR}/rules/skill-routing.md，按 Skill 执行流程调用编码 Skill（前端 /frontend-code-standards；后端无内置编码 Skill，直接使用 C-01~C-10 内置规约），**必须输出 Skill 执行日志**，完成后更新 `coding-skill` 为 `done` 或 `fallback`
     > 用户也可显式运行 `/sdd-frontend-standards` 触发前端编码规范检查；后端无对应 slash 命令，使用内置规约。
-  - **Bug / Refactor 无 affected-module 时**：跳过 index.md 状态检查，仅按 context 文件是否存在决定（有 → 以 context 为规范编码；无 → 前端调用 /frontend-coding，后端使用 C-01~C-10），Skill 执行后不更新 index.md
+  - **Bug / Refactor 无 affected-module 时**：跳过 index.md 状态检查，仅按 context 文件是否存在决定（有 → 以 context 为规范编码；无 → 前端调用 /frontend-code-standards，后端使用 C-01~C-10），Skill 执行后不更新 index.md
 - 编码时必须遵循 §3.1 加载的编码上下文（铁律 + context 文件规范 + 内部公共能力 + 架构约束 + 知识卡片中的已有函数），复用已有能力，禁止重复封装
 - `.project/reverse-scan/` 存在时：优先从知识卡片中查找可复用的已有函数（精确到 类名.方法名 + 业务语义），而非仅从 context 文件的公共能力列表粗匹配。知识卡片为初始化时的快照，编码过程中不回写更新（如需刷新，用户说"重新扫描"）
 - 编码过程中新增公共工具/组件/枚举 → 追加到对应 context 文件（前端 → frontend-context.md；后端 → backend-context.md）的「内部公共能力」章节
@@ -535,22 +535,23 @@ produced: .outdocs/audit-report.md#{锚点-slug} {SHA-256 前 8 位}
 
 ### §3.7.1 自动化单测（调用 unit-test-generator）
 
-**`.test-env.md` 按需生成 + 自动检测**（调用 unit-test-generator Skill 前必须完成）：
+**`.test/.test-env.md` 按需生成 + 自动检测**（调用 unit-test-generator Skill 前必须完成）：
 
-§3.7.1 是消费 `.test-env.md` 的关键章节，进入时**按以下流程确保配置完整**：
+§3.7.1 是消费 `.test/.test-env.md` 的关键章节，进入时**按以下流程确保配置完整**：
 
-1. **检查文件**：`ls .test-env.md`（项目根）
+1. **检查文件**：`ls .test/.test-env.md`
 2. **文件不存在 → 创建 + 自动扫描**：
-   - 若 §2.7 已经走过（同 feature 通常先 §2.7 再 §3.7），文件应已存在；否则按 §2.7 「`.test-env.md` 按需生成 + 自动检测」段同样流程创建
+   - 若 §2.7 已经走过（同 feature 通常先 §2.7 再 §3.7），文件应已存在；否则按 §2.7 「`.test/.test-env.md` 按需生成 + 自动检测」段同样流程创建
+   - 先确保 `.test/` 目录存在
    - Read 权威模板 `{SKILL_DIR}/tools/test-case-design/references/test-env-template.md` 「## 一、完整模板」代码块
    - 按 §2.7 的「配置字段检测来源参考表」逐字段扫描项目实际配置并填值
    - AI 无法检测的字段保留模板默认值并标注 `  # TODO 用户填写`
 3. **文件已存在 → 检查 TODO 字段**：
-   - `grep '# TODO' .test-env.md`
+   - `grep '# TODO' .test/.test-env.md`
    - 有 TODO → 按检测表针对仍为 TODO 的字段扫描补全
-4. **vars 类账号字段无法自动检测时**：触发 G2 停车询问用户（详见 §2.7 「用户决策路径」段，规则相同）
+4. **vars 类账号字段无法自动检测时**：不停车，不猜测；保留 TODO 并在单测 / E2E 后续运行阶段按缺失变量处理
 
-完成 `.test-env.md` 检查 / 补全后，才进入下方"前置清理 + Skill 调用"流程。
+完成 `.test/.test-env.md` 检查 / 补全后，才进入下方"前置清理 + Skill 调用"流程。
 
 **前置清理**（中断恢复机制）：
 
@@ -570,9 +571,9 @@ produced: .outdocs/audit-report.md#{锚点-slug} {SHA-256 前 8 位}
 
 **工作模式**：自主设计模式（从 REQ/DES + 实际源代码 → 设计单测用例 + 生成代码 + 执行 + 报告）
 
-**SDD 模式参数**：
-- `input`：当前模块的 REQ + DES + 实际源代码文件
-- `frameworks`：从 project-profile.md 技术栈自动推断（前端→vitest/jest，后端→junit5/pytest/gotest）；全栈项目一次调用同时生成
+**SDD 模式参数**（字段名以 `tools/unit-test-generator/SKILL.md` 输入契约为准）：
+- 自主设计模式**无需 `tc_source`**：从当前模块 REQ + DES + 实际源代码自动设计用例
+- `framework_hint`：从 project-profile.md 技术栈自动推断（前端→vitest/jest，后端→junit5/pytest/gotest）；全栈项目一次调用同时生成
 - `exec_mode`：`true`（SDD 模式默认开启，生成后自动执行）
 - `output_dir`：`.test/unit/`
 
@@ -659,8 +660,8 @@ exec_mode=true 时，AI 尝试执行 test runner：
 Step 1：判断每项的执行方式
 
   [前端验证]（涉及前端时）
-  T-01 交互逻辑 → ⏭ 跳过（需浏览器点击，AI 无法执行，待人工或未来 E2E）
-  T-02 页面跳转 → ⏭ 跳过（需浏览器跳转，AI 无法执行，待人工或未来 E2E）
+  T-01 交互逻辑 → ⏭ 跳过（需浏览器点击，待人工或 §4 E2E）
+  T-02 页面跳转 → ⏭ 跳过（需浏览器跳转，待人工或 §4 E2E）
   T-03 页面渲染 → 🤖 AI 自动执行（HTTP 状态检查 + 错误关键词扫描）
   不涉及前端 → T-01/T-02/T-03 全部标记"不涉及"
 
@@ -701,13 +702,14 @@ Step 3：输出结果（通知用户，不等待回复）
 - T-05 边界覆盖：✅ 单测已覆盖 / ✅ curl 验证通过 / ❌ {错误详情}
 - T-06 返回值正确：✅ 单测已覆盖 / ✅ curl 验证通过 / ❌ {错误详情}
 
-结论：{PASS / FAIL}
+结论：{PASS / SKIP / FAIL}
   ✅ 通过：{N} 项 | ⏭ 跳过：{N} 项 | ❌ 不通过：{N} 项
 ```
 
-**不通过处理**：
-- 有 ❌ → 回 §3.5 修复代码，重新 §3.6 + §3.7（自愈循环计数 +1）
-- 全部 ✅ 或 ⏭ → 继续 §3.8
+**结论判定 + 不通过处理**：
+- 有 ❌ → 结论 `FAIL`，回 §3.5 修复代码，重新 §3.6 + §3.7（自愈循环计数 +1）
+- 无 ❌，但单测整体降级（§3.7.1 unit-test-generator 输出 SKIP：依赖缺失 / 无 Bash / 环境配置 / Skill 缺失 / 自愈超限）→ 结论 `SKIP`，允许继续 §3.8（带降级标注，§4 #2/#15 按 SKIP 通过归档）
+- 全部 ✅ 或 ⏭（无降级）→ 结论 `PASS`，继续 §3.8
 
 **综合自测报告**（§3.7.1 + §3.7.2 合并追加到 `.outdocs/unit-test-report.md`，**锚点格式固定**，§3.8 回灌时按本锚点定位）：
 
@@ -743,7 +745,8 @@ Step 3：输出结果（通知用户，不等待回复）
 - T-05 边界覆盖：✅ 单测已覆盖
 - T-06 返回值正确：✅ 单测已覆盖
 
-结论：PASS | 修复：{N} 项 | 回归次数：{N} | 跳过：{N} 项（待人工或 E2E）
+结论：{PASS / SKIP / FAIL} | 修复：{N} 项 | 回归次数：{N} | 跳过：{N} 项（待人工或 E2E）
+> SKIP 时必须在本行后补一行「SKIP 原因：{依赖缺失 / 无 Bash / 环境配置 / Skill 缺失 / 自愈超限}」（与 §3.7 出口 schema 第 756 行、§4 归档 #2 一致）
 ```
 
 **出口产物 schema（强制）**：
@@ -813,6 +816,7 @@ produced: .outdocs/unit-test-report.md#{锚点-slug} {SHA-256 前 8 位}
   - 无 → **进入 §3.9 前执行跨模块归档门禁**：
     - 读取 context.md，检查上一 dev-order 模块是否已有 `§4 归档` 记录
     - 无归档记录（last 不含 `§4 归档`）且当前非首模块 → ⚠️ 上一模块未归档！立即执行上一模块的 §4 归档流程（加载 `{SKILL_DIR}/rules/phase-archive.md`），**但仅执行 15 点检查 + 归档通用动作（标签/摘要/context.md），跳过「§4 归档后路由」**，完成后回到当前模块 §3.9
+      > **补归档 last 序列规约（防跨对话恢复误判）**：补归档上一模块时写入的 context.md 记录，`last:` 文案**必须显式带模块标识**：`{日期} [Feature] {上一模块名} 已归档（跨模块补归档）— last: §4 归档（补归档·当前推进中模块 {当前模块名} §3.9，下次续 {当前模块名}）`。回到当前模块后 §3.11 仍正常追加当前模块记录。G0.4 跨对话恢复**只读最后一条含 `last:` 的记录**（规约见 AGENTS.md 第 7/8 条），中途补归档记录因带「补归档·当前推进中」标识不会被误判为"全部归档完成"；执行自审遇到此类记录按其括注的"下次续 {模块}"定位，不触发回滚。
     - 有归档记录 / 当前为首个模块 → ✓ 继续 §3.9
 
 ---

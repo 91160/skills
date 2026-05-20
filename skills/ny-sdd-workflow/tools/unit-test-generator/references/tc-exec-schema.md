@@ -4,18 +4,7 @@
 
 **核心原则**：全 Markdown，无 YAML，结构固定，AI 读写零歧义。
 
-> **共享契约同步注意**：本文件是 `test-case-design` 和 `unit-test-generator` 两个 Skill 的**共享契约**，采用方案 A（双份副本，两份文件逐字节一致）。
->
-> - `test-case-design` Skill 用本文件**生成** tc-exec 块
-> - `unit-test-generator` Skill 用本文件**解析** tc-exec 块
->
-> **权威版本约定**：**以 `test-case-design/references/tc-exec-schema.md` 为权威版本（SOURCE OF TRUTH）**，`unit-test-generator/references/tc-exec-schema.md` 是从权威版本复制的副本。
->
-> **维护规则**：
-> - 对 15 操作符、7 channel、元数据字段、前置/清理动作清单、变量引用语法的任何修改，**必须先从权威版本修改**
-> - 修改后同步命令：`cp test-case-design/references/tc-exec-schema.md unit-test-generator/references/tc-exec-schema.md`
-> - 验证同步：`diff test-case-design/references/tc-exec-schema.md unit-test-generator/references/tc-exec-schema.md`（应无输出）
-> - **两份副本必须逐字节一致**（包括本段同步注意的内容本身）
+> **契约边界**：本文件是 `unit-test-generator` 的单测派生契约。`test-case-design` 的 TC-F E2E 契约已迁移为 `e2e-exec`，定义在 `test-case-design/references/e2e-exec-schema.md`。两者不共享 schema。
 
 ---
 
@@ -64,7 +53,7 @@
 |---|---|---|
 | `api` | HTTP 接口测试 | mcp_capabilities 含 `http-client` |
 | `db` | 数据库状态测试 | mcp_capabilities 含 `sql-runner` |
-| `unit` | 单元测试（基于代码） | framework_hint 已声明，Step 6 派生骨架 |
+| `unit` | 单元测试（基于代码） | framework_hint 已声明，Step 4 派生骨架 |
 | `cli` | 命令行工具测试 | mcp_capabilities 含 `shell` |
 | `ui-dom` | 前端 DOM 交互测试 | mcp_capabilities 含 `playwright` 或 `browser` |
 | `ui-visual` | 视觉还原测试 | **不可自动执行**，归为人工 |
@@ -300,7 +289,7 @@ click button[type="submit"]
 
 ## 七、变量引用
 
-变量用 `${env.{path}}` 引用，路径对应 `.test-env.md` 中的字段。
+变量用 `${env.{path}}` 引用，路径对应 `.test/.test-env.md` 中的字段。
 
 ### 语法
 
@@ -308,7 +297,7 @@ click button[type="submit"]
 ${env.{path}}
 ```
 
-- `{path}` 用点号嵌套，与 `.test-env.md` 的 path 完全一致
+- `{path}` 用点号嵌套，与 `.test/.test-env.md` 的 path 完全一致
 - 变量在请求代码块、断言期望值、动作参数中均可使用
 
 ### 使用场景
@@ -322,10 +311,10 @@ ${env.{path}}
 
 ### 变量解析规则
 
-- Skill 生成 tc-exec 时**强制校验**：每个 `${env.xxx}` 引用的路径必须在 `.test-env.md` 中存在
+- Skill 生成 tc-exec 时**强制校验**：每个 `${env.xxx}` 引用的路径必须在 `.test/.test-env.md` 中存在
 - 路径不存在 → Skill 报错并指出具体行号
-- 运行时由 §3 Step 6 自测阶段的 AI 展开变量（替换为真实值后发起请求）
-- `.test-env.md` 缺失时，所有含变量的用例强制降级为 `manual` channel
+- 运行时由 SDD §3.7 开发自测阶段的 AI 展开变量（替换为真实值后发起请求）
+- `.test/.test-env.md` 缺失时，所有含变量的用例强制降级为 `manual` channel
 
 ---
 
@@ -416,7 +405,7 @@ describe('TC-pay-012 金额计算 - 满减优惠', () => {
 - `stdout contains "1 passed"`
 ```
 
-> 说明：channel=unit 的"请求"是完整单测代码，Step 6 派生骨架时展开为完整可跑文件；"断言"基于运行 test runner 后的输出。
+> 说明：channel=unit 的"请求"是完整单测代码，Step 4 派生骨架时展开为完整可跑文件；"断言"基于运行 test runner 后的输出。
 
 ### 示例 4：channel=cli
 
@@ -507,7 +496,7 @@ Skill 生成 tc-exec 时必须逐条检查：
 4. [ ] 所有断言都用行内反引号包裹
 5. [ ] 所有断言操作符都在 15 个固定枚举内
 6. [ ] 断言路径语法正确（JSONPath 简化版）
-7. [ ] 所有 `${env.xxx}` 变量在 `.test-env.md` 中存在
+7. [ ] 所有 `${env.xxx}` 变量在 `.test/.test-env.md` 中存在
 8. [ ] 前置/清理动作都在固定动作清单内
 9. [ ] 非 `ui-visual` / `manual` channel 都有请求代码块
 10. [ ] 非 `ui-visual` / `manual` channel 都有至少 1 条断言

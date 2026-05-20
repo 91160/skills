@@ -1,6 +1,6 @@
 # 测试框架适配器 — 完整可跑的单测模板库
 
-本文件为 Skill Step 6（派生单测骨架）提供每个测试框架的完整代码模板。Skill 按 `framework_hint` 选对应模板，逐条 tc-exec 翻译为**完整可跑**的测试文件。
+本文件为 Skill Step 4（逐条翻译，派生单测骨架）提供每个测试框架的完整代码模板。Skill 按 `framework_hint` 选对应模板，逐条 tc-exec 翻译为**完整可跑**的测试文件。
 
 **前置阅读**：`tc-exec-schema.md`、`channel-playbooks.md`。
 
@@ -622,7 +622,7 @@ beforeEach(() => {
 });
 ```
 
-### fixture 生成规则（Skill Step 6 执行）
+### fixture 生成规则（Skill Step 4 执行）
 
 - tc-exec 的 `db.seed {path}` 动作 → 检查原路径是否存在
   - 存在 → 骨架代码引用原路径
@@ -656,15 +656,15 @@ beforeEach(() => {
 
 ### framework_hint 缺失时
 
-- Skill Step 6 整个跳过
+- Skill Step 4 整个跳过（不派生骨架）
 - `test-case-status: doc-only`
-- 回执中明确提示："未声明测试框架，单测骨架未派生。若要派生，请在 `.test-env.md` 补充 `test_commands` 字段或调用时传递 `framework_hint`"
+- 回执中明确提示："未声明测试框架，单测骨架未派生。若要派生，请在 `.test/.test-env.md` 补充 `test_commands` 字段或调用时传递 `framework_hint`"
 
 ---
 
 ## 九、依赖提示模板（Skill 回执中使用）
 
-Skill 完成 Step 6 后，在回执中追加"依赖检查"段落：
+Skill 完成 Step 5（写盘 + 回执）时，在回执中追加"依赖检查"段落：
 
 ```
 【依赖提示】为让生成的单测骨架可跑，请确保项目已安装以下依赖：
@@ -681,7 +681,7 @@ Skill 完成 Step 6 后，在回执中追加"依赖检查"段落：
 
 ## 十、派生质量自检清单
 
-Skill Step 6 派生每个骨架文件后，必须自检：
+Skill Step 5 写盘时，派生的每个骨架文件必须自检：
 
 1. [ ] 文件名符合 `{TC-ID}.{framework}.{ext}` 模式
 2. [ ] 文件头有 `// @TC-{TC-ID}` 注释

@@ -200,7 +200,7 @@ import fixtures from '../fixtures/TC-login-001.json';
 import fixtures from './skeleton/fixtures/TC-login-001.json';
 ```
 
-**为什么**：SDD §2.5 Step 5 迁移时，骨架文件从 `{output_dir}/skeleton/{TC-ID}.{framework}.{ext}` 迁到 `{test_dirs.frontend_unit}/{TC-ID}.test.ts`，fixture 文件从 `{output_dir}/skeleton/fixtures/{TC-ID}.json` 迁到 `{test_dirs.frontend_unit}/fixtures/{TC-ID}.json`。**两者保持同级关系不变**。
+**为什么**：SDD §3.7.1 骨架迁移时，骨架文件从 `{output_dir}/skeleton/{TC-ID}.{framework}.{ext}` 迁到 `{test_dirs.frontend_unit}/{TC-ID}.test.ts`，fixture 文件从 `{output_dir}/skeleton/fixtures/{TC-ID}.json` 迁到 `{test_dirs.frontend_unit}/fixtures/{TC-ID}.json`。**测试文件用 `./fixtures/{TC-ID}.json` 引用 fixture（fixture 始终在测试文件同目录的 `fixtures/` 子目录），迁移前后该相对引用不变**。
 
 因此只有使用相对同级路径 `./fixtures/{TC-ID}.json`，骨架代码在迁移前后都能正确引用 fixture，**无需 SDD 侧重写 import 路径**。
 
@@ -410,7 +410,7 @@ Fixture 策略（inline/external）和 DB 类型独立，互不影响。
 
 ```
 【fixture 策略调整】
-检测到 .test-env.md 未声明 seed_dir，无法使用 external fixture 文件
+检测到 .test/.test-env.md 未声明 seed_dir，无法使用 external fixture 文件
   降级: fixture_strategy auto → inline
   影响: 字段数 >5 的 fixture 也会内联到测试代码，可能使单测文件变大
 ```
@@ -433,9 +433,9 @@ Fixture 策略（inline/external）和 DB 类型独立，互不影响。
 
 ---
 
-## 六、与 `.test-env.md` 的关系
+## 六、与 `.test/.test-env.md` 的关系
 
-Skill 的 Step 2 读取 `.test-env.md` 的以下字段决定 fixture 行为：
+Skill 的 Step 2 读取 `.test/.test-env.md` 的以下字段决定 fixture 行为：
 
 | 字段 | 用途 |
 |---|---|
@@ -444,7 +444,7 @@ Skill 的 Step 2 读取 `.test-env.md` 的以下字段决定 fixture 行为：
 | `test_dirs.backend_unit` | 骨架代码的目标目录，fixture 文件放到 `{test_dirs.backend_unit}/fixtures/` |
 | `vars.*` | fixture 中的占位符（如 `${env.vars.test_user}` → 展开为实际值） |
 
-`.test-env.md` 缺失 → 按场景 1/2 降级处理。
+`.test/.test-env.md` 缺失 → 按场景 1/2 降级处理。
 
 ---
 

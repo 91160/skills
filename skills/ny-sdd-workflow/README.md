@@ -1,6 +1,6 @@
 # NY-SDD-Workflow
 
-**SDD Workflow v1.0.3** — AI 编码工作流规则，G 系列全局规则 + §1~§4 阶段编号 + 流程声明头机制（含四值 blocking 防偷懒）+ 动态加载架构 + 执行自审统一机制 + 13 个 Slash Commands，兼容多 AI 编码工具。
+**SDD Workflow v1.0.4** — AI 编码工作流规则，G 系列全局规则 + §1~§4 阶段编号 + 流程声明头机制（含四值 blocking 防偷懒）+ 动态加载架构 + 执行自审统一机制 + 14 个 Slash Commands，兼容多 AI 编码工具。
 
 一条命令安装，统一团队 AI 编码规范。
 
@@ -21,7 +21,7 @@ NY-SDD-Workflow 是一套 **AI 编码工作流规则**，定义了从项目启�
 - **变更通道**：直通 / 快速 / 标准三通道，按变更类型自动路由
 - **交付文档**：接口文档 / 审计报告 / 自测报告 / 执行报告 / 变更记录，按模块章节自动追加
 - **多工具兼容**：一份规则文件，自动适配 8 款 AI 编码工具
-- **Slash Commands**：13 个 slash 命令显式触发关键流程与工具（`/sdd-init` 安装、`/sdd-start` 开发、`/sdd-prd-change`、`/sdd-bug-fix` 等），支持用户级 / 项目级两种安装位置
+- **Slash Commands**：14 个 slash 命令显式触发关键流程与工具（`/sdd-init` 安装、`/sdd-start` 开发、`/sdd-prd-change`、`/sdd-bug-fix` 等），支持用户级 / 项目级两种安装位置
 
 ---
 
@@ -31,7 +31,7 @@ NY-SDD-Workflow 是一套 **AI 编码工作流规则**，定义了从项目启�
 
 ```bash
 # 1. 拉取 skill 包到 ~/.claude/skills/ny-sdd-workflow/
-npx skills add https://git.nykjsrv.cn/ai-coding/skills.git --skill ny-sdd-workflow --yes
+npx skills add https://github.com/91160/skills.git --skill ny-sdd-workflow --yes
 ```
 ```
 # 2. 在 AI 对话中触发安装（首次必须用自然语言，slash 命令此时还没装）
@@ -76,7 +76,7 @@ npx skills add https://git.nykjsrv.cn/ai-coding/skills.git --skill ny-sdd-workfl
 | 单独触发自动化单测 | `/sdd-unit-test` |
 | 更新 / 查看状态 / 卸载 | `/sdd-init` 或 "更新工作流" |
 
-> **完整 13 命令清单见下方"使用 → Slash Commands"章节。**
+> **完整 14 命令清单见下方"使用 → Slash Commands"章节。**
 
 ### 你会看到的 AI 行为凭证（不是错误）
 
@@ -90,7 +90,7 @@ npx skills add https://git.nykjsrv.cn/ai-coding/skills.git --skill ny-sdd-workfl
 | **G0.1 推断+确认** | 你首条消息含项目特征时 | `【项目确认】基于你的描述，推断 A 新项目，请确认 A/B/C/D` | 防止 AI 跳过 G0.1 自作主张 |
 | **上节产物回灌段**| 进入 §2.5 / §3.7 / §3.8 前 | `【上节产物回灌】执行 Bash: grep -n ... \| shasum -a 256 ...` + 粘贴回显原文 | 证明 §2.4 / §3.6 / §3.7 真完成；哈希对不上回滚上节 |
 | **审计起手清单**| 进入 §3.6 前 | `【审计起手清单】怀疑点 1: 针对 S-01, src/foo.ts:42, 反向假设...` | 证明 §3.6 真做了审计，不是"代码符合预期"敷衍 |
-| **context.md `produced` 字段**| §2.4 / §3.6 / §3.7 完成时 | `produced: .outdocs/audit-report.md#01-用户认证-代码审计报告-2026-05-11 a1b2c3d4` | 下次对话开局校验哈希 + 锚点 |
+| **context.md `produced` 字段**| 仅 §2.4 / §3.6 / §3.7 三章强制（§4 E2E 不写 produced，只写 `ref:` 续行，见编号规约第 8 条） | `produced: .outdocs/audit-report.md#01-用户认证-代码审计报告-2026-05-11 a1b2c3d4` | 下次对话开局校验哈希 + 锚点 |
 | **执行自审输出**| 下次对话开局（后续路径） | `【执行自审】上次 last: §3.6 ... produced 字段: ✅ ... 哈希一致: ✅ ... 结论: ✅` | 跨对话发现敷衍 / 伪造产物 |
 
 **怎么用这些凭证排查问题**：
@@ -183,7 +183,7 @@ AGENTS.md 模板中用 `{SKILL_DIR}` 占位符引用阶段文件。安装时 cli
 ### 方式 1：通过 Skills 体系安装（推荐）
 
 ```bash
-npx skills add https://git.nykjsrv.cn/ai-coding/skills.git --skill ny-sdd-workflow --yes
+npx skills add https://github.com/91160/skills.git --skill ny-sdd-workflow --yes
 ```
 
 安装后在 AI 对话中说 **"安装 SDD"**（**首次必须用自然语言**，因为 `/sdd-init` 等 slash 命令此时还未安装到 Claude Code），AI 会自动：
@@ -192,13 +192,13 @@ npx skills add https://git.nykjsrv.cn/ai-coding/skills.git --skill ny-sdd-workfl
 3. 询问 slash commands 安装位置（用户级 `~/.claude/commands/` / 项目级 `.claude/commands/` / 跳过）并安装
 4. 输出初始化状态报告
 
-完成后即可使用 13 个 slash 命令。下一步：在 AI 对话中说"启动工作流"或运行 `/sdd-start` 进入项目开发。
+完成后即可使用 14 个 slash 命令。下一步：在 AI 对话中说"启动工作流"或运行 `/sdd-start` 进入项目开发。
 
 ### 方式 2：本地 CLI（git clone 后，适合 CI/CD 自动化）
 
 ```bash
 # 1. 克隆 skill 仓库到本地（路径自选，下方记为 <SDD_DIR>）
-npx skills add https://git.nykjsrv.cn/ai-coding/skills.git --skill ny-sdd-workflow --yes
+npx skills add https://github.com/91160/skills.git --skill ny-sdd-workflow --yes
 # 上述命令会把 skill 装到 ~/.claude/skills/ny-sdd-workflow/，即 <SDD_DIR>=~/.claude/skills/ny-sdd-workflow
 
 # 2. 在你的项目根目录运行本地 cli.js
@@ -256,7 +256,7 @@ node <SDD_DIR>/bin/cli.js remove --commands=user        # +清理用户级 slash
 
 ### Slash Commands（推荐）
 
-13 个 slash 命令显式触发本工作流的关键流程与工具。安装位置在 `/sdd-init` 时三选一：用户级（`~/.claude/commands/`，所有项目可见）/ 项目级（`.claude/commands/`，仅当前项目）/ 跳过（保留自然语言触发）。
+14 个 slash 命令显式触发本工作流的关键流程与工具。安装位置在 `/sdd-init` 时三选一：用户级（`~/.claude/commands/`，所有项目可见）/ 项目级（`.claude/commands/`，仅当前项目）/ 跳过（保留自然语言触发）。
 
 #### 流程触发类（4 个）
 
@@ -267,7 +267,7 @@ node <SDD_DIR>/bin/cli.js remove --commands=user        # +清理用户级 slash
 | `/sdd-prd-change` | PRD 需求变动同步（§2.6 Spec Sync `[prd]`：审计 + 影响分析 + 级联更新 + 测试用例联动 + 留痕） | "需求变了" / "PRD 改了" / "新增模块" |
 | `/sdd-bug-fix` | 当前开发过程中的 bug 修复（G0.4.1 二次判定 → §3.0 bug 修复回环；不新建 REQ/DES，复用 approved 文档） | "这里有个 bug"（在已 approved 模块开发期间） |
 
-#### 工具触发类（9 个）
+#### 工具触发类（10 个）
 
 | 命令 | 对应 Skill | 绑定阶段 |
 |------|-----------|---------|
@@ -280,6 +280,7 @@ node <SDD_DIR>/bin/cli.js remove --commands=user        # +清理用户级 slash
 | `/sdd-reverse-scan` | reverse-scan | §1.4 深度业务代码扫描 |
 | `/sdd-test-case` | test-case-design | §2.7 功能测试用例设计 |
 | `/sdd-unit-test` | unit-test-generator | §3.7.1 自动化单测 |
+| `/sdd-e2e-test` | e2e-test-runner | §4 全部模块归档后 E2E 测试 |
 
 > 每个工具命令都内置**流程冲突保护**：手动调用与当前 `context.md` 阶段不一致时，AI 会让用户三选一（A 独立执行 / B 作为工作流一部分执行 / C 取消），避免污染工作流状态。
 
@@ -305,7 +306,8 @@ ny-sdd-workflow/                         ← Skill 安装目录
 │   ├── sdd-wap-create.md                ← 工具：wap-project-creator
 │   ├── sdd-reverse-scan.md              ← 工具：reverse-scan
 │   ├── sdd-test-case.md                 ← 工具：test-case-design
-│   └── sdd-unit-test.md                 ← 工具：unit-test-generator
+│   ├── sdd-unit-test.md                 ← 工具：unit-test-generator
+│   └── sdd-e2e-test.md                  ← 工具：e2e-test-runner
 ├── rules/                               ← 阶段规则文件（AI 按需读取，含流程声明头）
 │   ├── phase-init.md                    ← §1 项目启动（§1.1~§1.5）
 │   ├── phase-spec.md                    ← §2 需求/设计/评审/功能测试（§2.1~§2.7）
@@ -371,8 +373,8 @@ ny-sdd-workflow/                         ← Skill 安装目录
 │   │   ├── ui/                        ← UI 设计稿（高保真 png/jpg/pdf）
 │   │   └── ui-spec/                   ← UI 解析文件（Figma/蓝湖导出 md）
 │   └── tech/                          ← 技术文档（API/建表脚本/配置等）
-├── .test-env.md                       ← 测试运行环境声明（§2.7 / §3.7.1 首次进入时按需生成 + 自动扫描项目配置补全；项目根目录，test-case-design / unit-test-generator 默认查找位置）
 ├── .test/                             ← 测试产出根目录（独立于 .project）
+│   ├── .test-env.md                   ← 测试运行环境声明（§2.7 / §3.7.1 首次进入时按需生成 + 自动扫描项目配置补全；§4 E2E 缺失时可创建/补全并读取 e2e.* / vars.* / selectors.*）
 │   ├── testcases/                     ← §2.7 功能测试用例（TC-F-*.md + CSV）
 │   └── unit/                          ← §3.7 单元测试（UT-*.md + skeleton/ + report.md）
 ├── .outdocs/                          ← 交付文档输出
@@ -384,7 +386,7 @@ ny-sdd-workflow/                         ← Skill 安装目录
 │   └── prd-change-log.md
 ├── .claude/                           ← Claude Code 配置（项目级 slash commands 时存在）
 │   └── commands/                      ← 仅当 /sdd-init 选择「项目级」安装位置时创建
-│       └── sdd-*.md                   ← 13 个 slash commands 的 symlink，指向 skill 源目录
+│       └── sdd-*.md                   ← 14 个 slash commands 的 symlink，指向 skill 源目录
 ├── .sdd-bak.{YYYYMMDDHHmm}/           ← [条件性] 仅当 /sdd-start 场景 C 选"重新开始"时创建
 │   ├── .project/                      ← 备份原 .project/
 │   ├── .test/                         ← 备份原 .test/（如存在）
@@ -434,7 +436,7 @@ G3 未覆盖场景兜底（AGENTS.md，全局触发）
   → §2.4 原型生成（仅 feature + 前端）
   → §2.5 评审（人工）→ review-status: approved
   → §2.7 功能测试用例设计（test-case-design Skill → TC 文档 + CSV，为 E2E 准备）
-  → E2E 测试：§4 全部模块归档后用户确认执行（未来 Skill）
+  → E2E 测试：§4 全部模块归档后用户确认执行（e2e-test-runner，Playwright only）
   → §2.6 Spec Sync（随时触发：specs/PRD/技术文档 三种触发源）
 
 §3 编码变更通道（rules/phase-coding.md，按需加载）
@@ -508,7 +510,7 @@ G3 未覆盖场景兜底（AGENTS.md，全局触发）
 | 深度代码扫描 | §1.4 深度业务代码扫描 | reverse-scan | 浅层业务架构推断 |
 | 功能测试用例设计 | §2.7 评审通过后 | test-case-design | 跳过（非编码阻断项） |
 | 单元测试 | §3.7 编码后自测 | unit-test-generator | T-01~T-06 全量手工自测 |
-| E2E 测试 | §4 全部模块归档后（用户确认） | [未发布] | — |
+| E2E 测试 | §4 全部模块归档后（用户确认） | e2e-test-runner | `tools/e2e-test-runner/` |
 
 Skill 执行流程（统一）：
 ```
@@ -597,7 +599,7 @@ ny-sdd-workflow        ← 常驻规则（AGENTS.md G 系列 + rules/ §1~§4 �
 
 **首次安装**（两条路径任选）：
 ```
-1. npx skills add https://git.nykjsrv.cn/ai-coding/skills.git --skill ny-sdd-workflow --yes
+1. npx skills add https://github.com/91160/skills.git --skill ny-sdd-workflow --yes
    # 拉 skill 包到 ~/.claude/skills/ny-sdd-workflow/（即 <SDD_DIR>）
 
 2-A. AI 对话交互式安装（首次推荐）：
@@ -608,7 +610,7 @@ ny-sdd-workflow        ← 常驻规则（AGENTS.md G 系列 + rules/ §1~§4 �
      node <SDD_DIR>/bin/cli.js init --tools=A --commands=user
      # 一条命令完成 AGENTS + 全部 AI 工具 + 用户级 slash 命令
 
-3. 安装完成后，/sdd-init 等 13 个 slash 命令即可在 Claude Code 内可见
+3. 安装完成后，/sdd-init 等 14 个 slash 命令即可在 Claude Code 内可见
 ```
 
 **后续使用（可用 slash 命令）**：
@@ -690,5 +692,6 @@ ny-sdd-workflow        ← 常驻规则（AGENTS.md G 系列 + rules/ §1~§4 �
 |------|------|------|
 | v1.0.0 | 2026-04-17 | 首次发布。G 系列全局规则（G0 对话初始化 / G1 写码门禁 / G2 停车信号 / G3 未覆盖场景兜底）+ §1~§4 阶段编号 + 流程声明头机制（phase/step/prev/next/gate/blocking）+ 动态加载架构 + PRD 三类内容管理（prototype/ui/ui-spec）+ UI 基准 6 级优先级 + context.md 状态标记规约 + 10 条编码规约 C-01~C-10 + 6 条 UI 还原规约 U-01~U-06 + 8 条审计规约 S-01~S-08 + 6 条自测规约 T-01~T-06 + 多 AI 工具兼容（8 款）|
 | v1.0.1 | 2026-04-20 | 集成 test-case-design（§2.7 功能测试用例设计）+ unit-test-generator（§3.7.1 自动化单测）+ 9 个 Skill 内置 tools/ 目录 + bug 修复回环机制（G0.4.1 二次判定 → §3.0 回环 → §3.10 文档留痕 → §3.11 路由分流）+ G1 #5 回环豁免 + java-coding/code-audit 移除改用内置兜底 + S-08 功能完整性审计 |
-| v1.0.2 | 2026-04-27 | 新增 13 个 Slash Commands（`.claude/commands/sdd-*.md`）：4 个流程触发类（`/sdd-init` `/sdd-start` `/sdd-prd-change` `/sdd-bug-fix`）+ 9 个工具触发类（覆盖 tools/ 下每一个 skill）+ 安装策略 C（用户级/项目级/跳过 三选一）+ 流程冲突保护（A 独立 / B 工作流内 / C 取消）+ AGENTS.md 加入 `/sdd-start` 触发约束（强制必读 context.md 的四场景路由）+ SKILL.md / skill-routing.md 同步入口表 |
+| v1.0.2 | 2026-04-27 | 新增 Slash Commands（`.claude/commands/sdd-*.md`）：4 个流程触发类 + 工具触发类 + 安装策略 C（用户级/项目级/跳过 三选一）+ 流程冲突保护（A 独立 / B 工作流内 / C 取消）+ AGENTS.md 加入 `/sdd-start` 触发约束（强制必读 context.md 的四场景路由）+ SKILL.md / skill-routing.md 同步入口表 |
 | v1.0.3 | 2026-05-12 | **四值 blocking 防偷懒 + 完善 + 安装体验修复**。核心：① blocking 字段从 2 值扩为 4 值（`true` / `false` / `gated` / `audit-required`）。② blocking 调整：§2.4 原型 false→true、§2.5 评审 true→gated、§3.4 影响面 false→true、§3.6 审计 false→audit-required、§3.7 自测 false→gated、§3.8 task false→gated、§2.7 false→true、§3.11 false→true。③ 新增「上节产物回灌」（§2.5/§3.7/§3.8）+「审计起手清单」（§3.6，≥3 怀疑点 + 验证 + ≥3 finding 或辩护；至少 1 个针对 ≥10 行代码段；反向假设示例库 8 类）。④ context.md `produced` 字段（产物路径 + 锚点 + SHA-256 前 8 位；仅 §2.4 / §3.6 / §3.7 三章强制）。⑤ G0.0 / G0.5 合并为「执行自审」统一机制（跨对话开局触发 + 单会话每节进入触发）。⑥ 跨多模块 feature 每模块独立锚点；自愈循环每轮独立锚点（第 N 轮后缀）。⑦ §2.4「涉及前端」三条客观判据；§2.5 双重校验防 prev 滥用。⑧ 锚点 slug 化伪代码确定性规则；「产物存在但 produced 缺失」辅助判定三选一。⑨ §3.9 prev 加 bug 修复回环跳 §3.8 分支；§4 #1/#2/#13 不通过必须整链重走。⑩ §2.7 Skill 缺失时不再跳过，兜底产出手工 TC-F 大纲触发 G2 由用户决策。⑪ **SKILL.md 方案 B**：Step 0 入口类型检测 + Step 7 路由分支——自然语言"启动工作流"触发的兜底安装完成后自动接续 G0，用户无需重复说"启动工作流"；`/sdd-init` 显式安装仍保留两阶段设计。 |
+| v1.0.4 | 2026-05-19 | **接入 §4 Playwright E2E 后置验收**：新增 `/sdd-e2e-test` 与 `tools/e2e-test-runner/`，消费 §2.7 TC-F 中 `channel=e2e` + `e2e-exec`，生成并执行 Playwright 用例；实际执行时输出 `.outdocs/e2e-report.md` + `.outdocs/e2e-report.html` 以及 `.test/e2e/report.md/html`。测试运行配置统一为 `.test/.test-env.md`，§2.7 / §3.7.1 / §4 按需创建和补全；`e2e.base_url` / `e2e.test_command` / 账号类 `vars.*` 不猜测，TODO 或未确认示例值均需用户确认。E2E 场景按新项目 feature、旧项目新增需求、bug 修复、技术优化分别处理：bug 修复不跑 E2E，技术优化仅必要且可执行时运行；入口级不执行只记录 SKIP 留痕，不生成 E2E 报告。HTML 报告升级为独立质量仪表盘，不依赖外部 CDN。 |
