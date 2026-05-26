@@ -9,7 +9,12 @@
 ### 方式 1：通过 Skills CLI 安装（推荐）
 
 ```bash
-npx skills add https://github.com/91160/skills --skill ny-sdd-workflow
+# 指定安装至项目中的.claude/skills目录(claude适用)
+npx skills add https://git.nykjsrv.cn/ai-coding/skills.git \
+  --skill ny-sdd-workflow -a claude-code
+# 默认安装至项目中的.agents/skills目录(codex适用)
+npx skills add https://git.nykjsrv.cn/ai-coding/skills.git \
+  --skill ny-sdd-workflow
 ```
 
 ### 方式 2：通过 Git Clone 手动安装
@@ -22,11 +27,11 @@ git clone https://github.com/91160/skills.git
 git clone --filter=blob:none --sparse https://github.com/91160/skills.git
 cd skills
 git sparse-checkout set ny-sdd-workflow
+
+将 `ny-sdd-workflow/` 放入项目的 .claude/skills目录(claude适用)
+或放入项目的 .agents/skills/` 目录(codex适用)
 ```
 
-### 方式 3：直接下载
-
-从 [GitHub Releases](https://github.com/91160/skills/releases) 下载最新版本，解压后将 `ny-sdd-workflow/` 放入项目的 `.agents/skills/` 目录。
 
 ### 安装后
 
